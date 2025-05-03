@@ -1,4 +1,5 @@
 
+#include <arpa/inet.h>
 #include <string.h>
 #include <stdlib.h>
 
@@ -23,7 +24,7 @@ uint32_t mqtt_varint_decode(uint8_t *data) {
 }
 
 
-void mqtt_varint_encode(uint8_t *dst, uint32_t n) {
+int mqtt_varint_encode(uint8_t *dst, uint32_t n) {
     int i = 0;
     uint8_t b;
     do {
@@ -34,16 +35,18 @@ void mqtt_varint_encode(uint8_t *dst, uint32_t n) {
         }
         dst[i++] = b;
     } while (n);
+    return i; // bytes used
 }
 
 void mqtt_string_new(mqtt_string_t *str, const char *msg) {
     uint16_t siz = strlen(msg);
-    str->buf = malloc(siz + 1);
-    str->size =  siz;
-    memcpy(str->buf, msg, strlen(msg));
-
-
+    uint16_t siz_b16 = htons(siz);
+    str->buf = malloc(siz + 2);
+    str->size = siz + 2;
+    memcpy(str->buf, &siz_b16, 2);
+    memcpy(str->buf + 2, msg, strlen(msg));
 }
+
 void mqtt_string_free(mqtt_string_t *str) {
     free(str->buf);
 }
