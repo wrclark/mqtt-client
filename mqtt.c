@@ -1,3 +1,7 @@
+
+#include <string.h>
+#include <stdlib.h>
+
 #include "mqtt.h"
 
 uint32_t mqtt_varint_decode(uint8_t *data) {
@@ -30,4 +34,16 @@ void mqtt_varint_encode(uint8_t *dst, uint32_t n) {
         }
         dst[i++] = b;
     } while (n);
+}
+
+void mqtt_string_new(mqtt_string_t *str, const char *msg) {
+    uint16_t siz = strlen(msg);
+    str->buf = malloc(siz + 1);
+    str->size =  siz;
+    memcpy(str->buf, msg, strlen(msg));
+
+
+}
+void mqtt_string_free(mqtt_string_t *str) {
+    free(str->buf);
 }
