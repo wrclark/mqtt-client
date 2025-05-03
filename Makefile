@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS=-O0 -g3 -Wall -Werror -Wextra -pedantic
+CFLAGS= -std=c89 -O0 -g3 -Wall -Werror -Wextra -pedantic
 CFILES = $(wildcard *.c)
 OBJECTS = $(CFILES:.c=.o)
 BIN = mqtt
@@ -10,7 +10,7 @@ $(BIN): $(OBJECTS)
 	$(CC) $(CFLAGS) $(OBJECTS) -o $(BIN)
 
 %.o: %.c
-	$(CC) $(CFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) -c $< 
 
 clean:
 	@rm -f $(OBJECTS) 

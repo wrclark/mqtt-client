@@ -21,7 +21,7 @@ uint32_t mqtt_varint_decode(uint8_t *data, uint8_t *used) {
         value += (b & 0x7F) * mult;
         mult *= 128;
     } while ((b & 0x80) != 0);
-    *used = i; // byte used
+    *used = i; 
     return value;
 }
 
@@ -37,18 +37,19 @@ int mqtt_varint_encode(uint8_t *dst, uint32_t n) {
         }
         dst[i++] = b;
     } while (n);
-    return i; // bytes used
+    return i; 
 }
 
 
 uint16_t mqtt_string_encode(uint8_t *buf, const char *msg) {
     uint16_t size = strlen(msg);
+    uint16_t sizeb16 = htons(size);
+    
     if (size >= MQTT_MAX_UTF8_STR_SIZE + 2) {
         fprintf(stderr, "encode: string too big (%u >= %u)\n", size, MQTT_MAX_UTF8_STR_SIZE);
         return -1;
     }
 
-    uint16_t sizeb16 = htons(size);
     memcpy(buf, &sizeb16, 2);
     memcpy(buf+2, msg, size);
 

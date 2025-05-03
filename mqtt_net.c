@@ -1,4 +1,4 @@
-
+#define _GNU_SOURCE
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <netinet/in.h>
@@ -19,8 +19,8 @@ int mqtt_net_connect(const char *addr, uint16_t port) {
     snprintf(port_str, sizeof(port_str), "%u", port);
 
     memset(&hints, 0, sizeof(hints));
-    hints.ai_family = AF_INET;        // IPv4 only
-    hints.ai_socktype = SOCK_STREAM;  // TCP
+    hints.ai_family = AF_INET;        
+    hints.ai_socktype = SOCK_STREAM;  
 
     if (getaddrinfo(addr, port_str, &hints, &res) != 0) {
         perror("getaddrinfo");
