@@ -10,7 +10,6 @@
 uint8_t bytes[4];
 
 uint8_t buf[1024*1024] = {0};
-uint8_t payload[] = {0, 4, 't', 'e', 's', 't'};
 
 int main() {
     mqtt_varint_encode(bytes, VARINT_TEST);
@@ -22,7 +21,10 @@ int main() {
     }
 
     mqtt_packet_t packet;
-    packet_connect(&packet, &payload, sizeof(payload));
+    mqtt_string_t payload;
+
+    mqtt_string_new(&payload, "test-user123");
+    packet_connect(&packet, &payload.buf, payload.size);
     packet_dump(&packet, buf);
 
     for(long unsigned int i=0; i<packet.real_size; i++) {
@@ -31,5 +33,9 @@ int main() {
             printf("\n");
         }
     }
+
+    mqtt_string_free(&packet.vh.prot);
+    mqtt_string_free(&payload);
+
     return 0;
 }

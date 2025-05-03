@@ -33,6 +33,10 @@ void packet_dump(mqtt_packet_t *pkt, uint8_t *buf) {
     p += 2;
 
     // Payload
+    uint16_t pl_sz = htons(pkt->payload_size);
+    memcpy(p, &pl_sz, 2);
+    p += 2;
+    
     memcpy(p, pkt->payload, pkt->payload_size);
 }
 
