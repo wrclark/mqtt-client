@@ -9,11 +9,12 @@ typedef struct {
 } mqtt_string_t;
 
 
-uint32_t mqtt_varint_decode(uint8_t *data);
+uint32_t mqtt_varint_decode(uint8_t *data, uint8_t *used);
 int      mqtt_varint_encode(uint8_t *dst, uint32_t n);
 
 void mqtt_string_new(mqtt_string_t *str, const char *msg);
 void mqtt_string_free(mqtt_string_t *str);
+char *mqtt_string_decode(uint8_t *buf, uint16_t *size);
 
 
 #endif

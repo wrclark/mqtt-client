@@ -32,7 +32,8 @@ enum PacketType {
     PUBACK
 };
 
-void packet_dump(mqtt_packet_t *pkt, uint8_t *buf);
+void packet_encode(mqtt_packet_t *pkt, uint8_t *buf);
 void packet_connect(mqtt_packet_t *pkt, void *payload, int size);
+void packet_decode(mqtt_packet_t *pkt, uint8_t *buf);
 
 #endif

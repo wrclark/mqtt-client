@@ -23,13 +23,13 @@ void hexdump(uint8_t *data, long unsigned int size);
 void asciidump(uint8_t *data, long unsigned int size);
 
 int main() {
-    mqtt_varint_encode(bytes, VARINT_TEST);
-    printf("%d == %d\n", mqtt_varint_decode(bytes), VARINT_TEST);
-    int fd =  mqtt_net_connect("test.mosquitto.org", 1883);
-    if (fd >= 0) {
-        puts("connected");
-        mqtt_net_close(fd);
-    }
+    //mqtt_varint_encode(bytes, VARINT_TEST);
+    //printf("%d == %d\n", mqtt_varint_decode(bytes), VARINT_TEST);
+    //int fd =  mqtt_net_connect("test.mosquitto.org", 1883);
+    //if (fd >= 0) {
+    //    puts("connected");
+    //    mqtt_net_close(fd);
+    //}
 
     mqtt_packet_t packet;
     mqtt_string_t payload;
@@ -40,13 +40,16 @@ int main() {
     mqtt_string_new(&payload, "mqttclientuser123");
 
     packet_connect(&packet, payload.buf, payload.size);
-    packet_dump(&packet, buf);
+    packet_encode(&packet, buf);
 
     asciidump(payload.buf, payload.size);
     hexdump(buf, packet.real_size);
 
     mqtt_string_free(&packet.vh.prot);
     mqtt_string_free(&payload);
+
+    memset(&packet, 0, sizeof (packet));
+    packet_decode(&packet, test_connect_pkt);
 
     return 0;
 }
@@ -64,7 +67,7 @@ void hexdump(uint8_t *data, long unsigned int size) {
 
 void asciidump(uint8_t *data, long unsigned int size) {
     for(long unsigned int i=0; i<size; i++) {
-        printf("%c ", data[i] >= 32 && data[i] <= 127 ? data[i] : '?');
+        printf("%c", data[i] >= 32 && data[i] <= 127 ? data[i] : '?');
     }
     printf("\n");
 }
