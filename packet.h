@@ -11,7 +11,7 @@ typedef struct {
 } fix_header_t;
 
 typedef struct {
-    mqtt_string_t prot;
+    uint8_t prot[6];
     uint8_t level;
     uint8_t flags;
     uint16_t keepalive;

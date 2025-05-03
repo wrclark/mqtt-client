@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "decode.h"
 #include "mqtt.h"
 #include "packet.h"
 
@@ -15,8 +16,8 @@ void packet_encode(mqtt_packet_t *pkt, uint8_t *buf) {
         *p++ = pkt->fh.remainder[i];
 
     // Variable header
-    memcpy(p, pkt->vh.prot.buf, pkt->vh.prot.size);
-    p += pkt->vh.prot.size;
+    memcpy(p, pkt->vh.prot, 6);
+    p += 6;
 
     *p++ = pkt->vh.level;
     *p++ = pkt->vh.flags;
@@ -32,9 +33,12 @@ void packet_encode(mqtt_packet_t *pkt, uint8_t *buf) {
 
 
 void packet_connect(mqtt_packet_t *pkt, void *payload, int size) {
+
+   // uint8_t buf[128];
+
     pkt->fh.type = 0x10;
 
-    mqtt_string_new(&pkt->vh.prot, "MQTT");
+    mqtt_string_encode(pkt->vh.prot, "MQTT");
     pkt->vh.level = 4;
     pkt->vh.flags = 2; // Clean session
     pkt->vh.keepalive = 60;
@@ -42,7 +46,7 @@ void packet_connect(mqtt_packet_t *pkt, void *payload, int size) {
     pkt->payload = payload;
     pkt->payload_size = size;
 
-    int vh_size = pkt->vh.prot.size + 6;
+    int vh_size = 12;
     int total = vh_size + size;
 
     int varint_len = mqtt_varint_encode(pkt->fh.remainder, total);
@@ -51,34 +55,5 @@ void packet_connect(mqtt_packet_t *pkt, void *payload, int size) {
 }
 
 void packet_decode(mqtt_packet_t *pkt, uint8_t *buf) {
-    (void) pkt;
-    uint16_t size=0;
-    uint8_t type = *buf++;
-    printf("%02x ", type);
-    switch (type) {
-        case 0x10:
-            printf("CONNECT\n");
-            break;
-        case 0x20:
-            printf("CONNACK\n");
-            break;
-        
-        default:
-            printf("NOT HANDLED\n");
-    }
-
-    uint8_t used=0;
-    printf("flags: %x\n", type & 0x0f);
-    printf("remaining length: %u\n", mqtt_varint_decode(buf, &used));
-    buf += used;
-    printf("used: %d\n", used);
-    printf("protocol: %s\n", mqtt_string_decode(buf, &size));
-    printf("size: %u\n", size);
-    buf += (size + 2);
-    printf("protocol level: %d\n", *buf++);
-    printf("connect flags: %d\n", *buf++);
-    printf("keep alive: %d\n", *(buf+1) | (*buf << 8));
-    buf += 2;
-    printf("payload: %s\n", mqtt_string_decode(buf, &size));
-
+    decode(buf, pkt);
 }

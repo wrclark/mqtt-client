@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#include "config.h"
 #include "mqtt.h"
 
 uint32_t mqtt_varint_decode(uint8_t *data, uint8_t *used) {
@@ -39,27 +40,28 @@ int mqtt_varint_encode(uint8_t *dst, uint32_t n) {
     return i; // bytes used
 }
 
-void mqtt_string_new(mqtt_string_t *str, const char *msg) {
-    uint16_t siz = strlen(msg);
-    uint16_t siz_b16 = htons(siz);
-    str->buf = malloc(siz + 2);
-    str->size = siz + 2;
-    memcpy(str->buf, &siz_b16, 2);
-    memcpy(str->buf + 2, msg, strlen(msg));
+
+uint16_t mqtt_string_encode(uint8_t *buf, const char *msg) {
+    uint16_t size = strlen(msg);
+    if (size >= MQTT_MAX_UTF8_STR_SIZE + 2) {
+        fprintf(stderr, "encode: string too big (%u >= %u)\n", size, MQTT_MAX_UTF8_STR_SIZE);
+        return -1;
+    }
+
+    uint16_t sizeb16 = htons(size);
+    memcpy(buf, &sizeb16, 2);
+    memcpy(buf+2, msg, size);
+
+    return size + 2;
 }
 
-void mqtt_string_free(mqtt_string_t *str) {
-    free(str->buf);
-}
+uint16_t mqtt_string_decode(uint8_t *buf, uint8_t *dest) {
+    uint16_t size = (buf[0] << 8) | buf[1];
+    if (size >= MQTT_MAX_UTF8_STR_SIZE + 2) {
+        fprintf(stderr, "decode: string too big (%u >= %u)\n", size, MQTT_MAX_UTF8_STR_SIZE);
+        return -1;
+    }
 
-// general utf8str later
-char *mqtt_string_decode(uint8_t *buf, uint16_t *size) {
-    // assume [0][1] are BE len
-    uint16_t len = (buf[0] << 8 ) | buf[1];
-    printf("0:%02x 1:%02x\n", buf[0], buf[1]);
-    char *ret = malloc(len+1);
-    memcpy(ret, buf+2, len);
-    ret[len]=0;
-    *size=len;
-    return ret;
+    memcpy(dest, buf+2, size);
+    return size;
 }

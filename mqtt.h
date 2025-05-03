@@ -3,18 +3,12 @@
 
 #include <stdint.h>
 
-typedef struct {
-    uint16_t size;
-    uint8_t *buf;
-} mqtt_string_t;
-
 
 uint32_t mqtt_varint_decode(uint8_t *data, uint8_t *used);
 int      mqtt_varint_encode(uint8_t *dst, uint32_t n);
 
-void mqtt_string_new(mqtt_string_t *str, const char *msg);
-void mqtt_string_free(mqtt_string_t *str);
-char *mqtt_string_decode(uint8_t *buf, uint16_t *size);
+uint16_t mqtt_string_encode(uint8_t *buf, const char *msg);
+uint16_t mqtt_string_decode(uint8_t *buf, uint8_t *dest);
 
 
 #endif

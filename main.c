@@ -32,21 +32,18 @@ int main() {
     //}
 
     mqtt_packet_t packet;
-    mqtt_string_t payload;
+    uint8_t sbuf[512];
+    uint16_t size;
 
     memset(&packet, 0, sizeof(packet));
-    memset(&payload, 0, sizeof(payload));
 
-    mqtt_string_new(&payload, "mqttclientuser123");
+    size = mqtt_string_encode(sbuf, "mqttclientuser123longusername8877!!");
 
-    packet_connect(&packet, payload.buf, payload.size);
+    packet_connect(&packet, sbuf, size);
     packet_encode(&packet, buf);
 
-    asciidump(payload.buf, payload.size);
+    asciidump(sbuf, size);
     hexdump(buf, packet.real_size);
-
-    mqtt_string_free(&packet.vh.prot);
-    mqtt_string_free(&payload);
 
     memset(&packet, 0, sizeof (packet));
     packet_decode(&packet, test_connect_pkt);
