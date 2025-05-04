@@ -33,37 +33,57 @@ static int decode_connect(uint8_t *buf, mqtt_packet_t *pkt) {
 
 void decode_publish(uint8_t *buf, mqtt_packet_t *pkt) {
     uint8_t used = 0;
-    uint8_t strings[2048];
+    char strings[64000]; /* topic buffer, fixed size */
     uint32_t plen;
     uint32_t i;
-
-    uint8_t flags = *buf;
-    uint8_t qos = (flags & 0x06) >> 1;
-
+    uint8_t flags;
+    uint8_t qos;
     uint16_t topic_len;
 
-    (void) pkt;
+    (void)pkt;
+
+    flags = *buf;
+    qos = (flags & 0x06) >> 1;
 
     printf("flags=%d ", flags & 0x0F);
     buf++;
 
     plen = mqtt_varint_decode(buf, &used);
-    printf("remain=%u ", plen);
     buf += used;
 
-    topic_len = (buf[0] << 8) | buf[1];
-    printf("topic_len=%u\n", topic_len);
-    buf += 2;
+    printf("remain=%u ", plen);
 
-    if (topic_len >= sizeof(strings)) topic_len = sizeof(strings) - 1;
+    /* Defensive check: remaining length must be at least 2 bytes for topic_len */
+    if (plen < 2) {
+        printf("Malformed packet: not enough data for topic length\n");
+        return;
+    }
+
+    topic_len = (buf[0] << 8) | buf[1];
+    buf += 2;
+    plen -= 2;
+
+    if (topic_len >= sizeof(strings)) {
+        topic_len = sizeof(strings) - 1;
+    }
+
+    if (plen < topic_len) {
+        printf("Malformed packet: topic length exceeds remaining length\n");
+        return;
+    }
+
     memcpy(strings, buf, topic_len);
-    strings[topic_len] = 0;
+    strings[topic_len] = '\0';
     printf("topic: %s\n", strings);
     buf += topic_len;
-
-    plen -= (2 + topic_len);
+    plen -= topic_len;
 
     if (qos > 0) {
+        /* Need 2 bytes for Packet Identifier */
+        if (plen < 2) {
+            printf("Malformed packet: missing packet identifier\n");
+            return;
+        }
         buf += 2;
         plen -= 2;
     }
