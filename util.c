@@ -48,3 +48,22 @@ void subscribe_topics(mqtt_subscribe_opt_t *sub, ...) {
     va_end(args);
     sub->size = total;
 }
+
+void hexdump(uint8_t *data, long unsigned int size) {
+    long unsigned int i;
+    for(i=0; i<size; i++) {
+        printf("%02x ", data[i]);
+        if ((i + 1) % 8 == 0) {
+            printf("\n");
+        }
+    }
+    printf("\n");
+}
+
+void asciidump(uint8_t *data, long unsigned int size) {
+    long unsigned int i;
+    for(i=0; i<size; i++) {
+        printf("%c", data[i] >= 32 && data[i] <= 127 ? data[i] : '?');
+    }
+    printf("\n");
+}

@@ -23,19 +23,19 @@ int mqtt_net_connect(const char *addr, uint16_t port) {
     hints.ai_socktype = SOCK_STREAM;  
 
     if (getaddrinfo(addr, port_str, &hints, &res) != 0) {
-        perror("getaddrinfo");
+        perror("mqtt_net_connect: getaddrinfo()");
         return -1;
     }
 
     sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
     if (sockfd == -1) {
-        perror("socket");
+        perror("mqtt_net_connect: socket()");
         freeaddrinfo(res);
         return -1;
     }
 
     if (connect(sockfd, res->ai_addr, res->ai_addrlen) != 0) {
-        perror("connect");
+        perror("mqtt_net_connect: connect()");
         close(sockfd);
         freeaddrinfo(res);
         return -1;
@@ -57,7 +57,7 @@ int mqtt_net_send(int fd, void *packet, size_t size) {
     while (total < size) {
         sent = send(fd, buf + total, size - total, 0);
         if (sent < 0) {
-            perror("mqtt_net_send: sent()");
+            perror("mqtt_net_send: send()");
             return -1;
         }
         total += sent;

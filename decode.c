@@ -120,23 +120,7 @@ static void decode_suback(uint8_t *buf, mqtt_packet_t *pkt) {
 
     for(i=0; i<rem-2; i++) {
         ret = *p++;
-        switch (ret) {
-            case 0x00:
-                printf("0x00 - Success - Max QoS 0\n");
-                break;
-            case 0x01:
-                printf("0x01 - Success - Max QoS 1\n");
-                break;
-            case 0x02:
-                printf("0x02 - Success - Max QoS 2\n");
-                break;
-            case 0x80:
-                printf("0x80 FAILURE\n");
-                break;
-            default:
-                printf("Bad response 0x%02X\n", ret);
-                break;
-        }
+        printf("QoS=0x%02X\n", ret);
     }
 
     pkt->real_size = p - buf;
@@ -144,8 +128,8 @@ static void decode_suback(uint8_t *buf, mqtt_packet_t *pkt) {
 
 
 int decode(uint8_t *buf, mqtt_packet_t *pkt) {
-    uint8_t type = *buf;
-    printf("%02x ", type);
+    uint8_t type = *buf & 0xf0;
+    printf("[D] type=0x%02X\n", type);
     switch (type & 0xf0) {
         case MQTT_PKT_CONNECT:
             decode_connect(buf, pkt);
