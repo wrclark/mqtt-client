@@ -6,19 +6,11 @@
 #include "mqtt.h"
 #include "mqtt_net.h"
 #include "packet.h"
+#include "util.h"
 
-
-#define VARINT_TEST 5389389
-uint8_t bytes[4];
 
 uint8_t buf[1024*1024] = {0};
-
-uint8_t test_connect_pkt[32] = {
-    0x10, 0x20, 0x00, 0x04, 0x4d, 0x51, 0x54, 0x54,
-    0x04, 0x02, 0x00, 0x3c, 0x00, 0x12, 0x63, 0x6c,
-    0x69, 0x65, 0x6e, 0x74, 0x75, 0x73, 0x65, 0x72,
-    0x6e, 0x61, 0x6d, 0x65, 0x38, 0x38, 0x38, 0x34
-};
+uint8_t subs[4096];
 
 void hexdump(uint8_t *data, long unsigned int size);
 void asciidump(uint8_t *data, long unsigned int size);
@@ -26,21 +18,23 @@ void asciidump(uint8_t *data, long unsigned int size);
 int main() {
 
     mqtt_packet_t packet;
+    mqtt_connect_opt_t conopt;
+    mqtt_subscribe_opt_t subopt;
     uint8_t sbuf[512];
     uint16_t size;
     int fd;
     int ret;
 
     memset(&packet, 0, sizeof(packet));
+    memset(&conopt, 0, sizeof(conopt));
+    memset(&subopt, 0, sizeof(subopt));
+    size = mqtt_string_encode(sbuf, "cffugdf44", 512);
 
-    size = mqtt_string_encode(sbuf, "cz9cc88484m", 512);
+    conopt.flags |= MQTT_CONNECT_FLAG_CLEAN;
+    conopt.keepalive = 60;
 
-    packet_connect(&packet, sbuf, size);
+    packet_connect(&packet, &conopt, sbuf, size);
     packet_encode(&packet, buf);
-
-    puts("CONNECT:");
-    asciidump(sbuf, size);
-    hexdump(buf, packet.real_size);
 
     fd = mqtt_net_connect("test.mosquitto.org", 1883);
     if (fd < 0) {
@@ -59,7 +53,7 @@ int main() {
 
     puts("mqtt_net_send OK");
 
-    ret = mqtt_net_recv(fd, buf, 2048);
+    ret = mqtt_net_recv(fd, buf, 1024*1024);
     if (ret <= 0) {
         fprintf(stderr, "error receiving data (size=%d)\n", ret);
         mqtt_net_close(fd);
@@ -75,9 +69,26 @@ int main() {
     puts("CONACK:");
     hexdump(buf, ret);
 
-    ret = packet_subscribe(buf, 1024, "test/topic");
+    subopt.buf = subs;
+    subopt.capacity = 4096;
+
+    subscribe_topics(&subopt,
+                    "test", 0,
+                    "test/topic", 0,
+                    "test123", 0,
+                    NULL);
+    
+    packet_subscribe(&packet, &subopt);
+    asciidump(subopt.buf, subopt.size);
+    hexdump(subopt.buf, subopt.size);
+    ret = packet_encode(&packet, buf);
+
+    printf("ret=%d\n", ret);
+
     puts("SUBSCRIBE:");
-    hexdump(buf, ret);
+
+    asciidump(buf, packet.real_size);
+    hexdump(buf, packet.real_size);
 
     ret = mqtt_net_send(fd, buf, ret);
     if (ret != 0) {
@@ -88,7 +99,7 @@ int main() {
 
     puts("mqtt_net_send SUBSCRIBE OK");
 
-    ret = mqtt_net_recv(fd, buf, 2048);
+    ret = mqtt_net_recv(fd, buf, 1024*1024);
     if (ret <= 0) {
         fprintf(stderr, "error receiving data (size=%d)\n", ret);
         mqtt_net_close(fd);
@@ -105,7 +116,7 @@ int main() {
     hexdump(buf, ret);
 
     while (1) {
-        ret = mqtt_net_recv(fd, buf, 2048);
+        ret = mqtt_net_recv(fd, buf, 1024*1024);
         if (ret <= 0) {
             puts("err");
             break;

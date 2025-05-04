@@ -2,79 +2,48 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "encode.h"
 #include "decode.h"
 #include "mqtt.h"
 #include "packet.h"
 
 
-void packet_encode(mqtt_packet_t *pkt, uint8_t *buf) {
-    int i;
-    uint16_t ka_be;
-    uint8_t *p = buf;
-
-    /* fixed header */
-    *p++ = pkt->fix.type;
-    for (i = 0; i < 4 && pkt->fix.remainder[i]; ++i)
-        *p++ = pkt->fix.remainder[i];
-
-    /* variable header */
-    memcpy(p, pkt->var.connect.prot, 6);
-    p += 6;
-
-    *p++ = pkt->var.connect.level;
-    *p++ = pkt->var.connect.flags;
-
-    ka_be = htons(pkt->var.connect.keepalive);
-    memcpy(p, &ka_be, 2);
-    p += 2;
-
-    memcpy(p, pkt->payload, pkt->payload_size);
-}
-
-
-
-void packet_connect(mqtt_packet_t *pkt, void *payload, int size) {
+void packet_connect(mqtt_packet_t *pkt, mqtt_connect_opt_t *opt, void *payload, int payload_size) {
     int vh_size = 6 + 1 + 1 + 2; 
-    int total = vh_size + size;
+    int total = vh_size + payload_size;
     int varint_len;
 
     pkt->fix.type = 0x10;
 
     mqtt_string_encode(pkt->var.connect.prot, "MQTT", 6);
     pkt->var.connect.level = 4;
-    pkt->var.connect.flags = 2;
-    pkt->var.connect.keepalive = 60;
+    pkt->var.connect.flags = opt->flags;
+    pkt->var.connect.keepalive = htons(opt->keepalive);
 
     pkt->payload = payload;
-    pkt->payload_size = size;
+    pkt->payload_size = payload_size;
 
     varint_len = mqtt_varint_encode(pkt->fix.remainder, total);
     pkt->real_size = 1 + varint_len + total;
 }
 
-int packet_subscribe(uint8_t *buf, size_t max, const char *topic) {
-    uint16_t pkt_id = htons(1);
-    uint16_t topic_len = htons(strlen(topic));
-    uint32_t rem;
-    uint8_t *p = buf;
+void packet_subscribe(mqtt_packet_t *pkt, mqtt_subscribe_opt_t *opt) {
+    uint16_t total = 0;
+    uint8_t varint_len;
+    pkt->fix.type = 0x80;
+    pkt->payload = opt->buf;
+    pkt->payload_size = opt->size;
+    pkt->var.subscribe.packet_id = htons(1);
 
-    (void) max;
-
-    *p++ = 0x82; /* SUBSCRIBE | flags */
-    rem = 2 + 2 + strlen(topic) + 1;
-    p += mqtt_varint_encode(p, rem);
-
-    memcpy(p, &pkt_id, 2); 
-    p += 2;
-    memcpy(p, &topic_len, 2);
-    p += 2;
-    memcpy(p, topic, strlen(topic));
-    p += strlen(topic);
-    *p++ = 0; /* qos 0 */
-
-    return  p - buf;  /* real size */
+    total = 2 + opt->size;
+    varint_len = mqtt_varint_encode(pkt->fix.remainder, total);
+    pkt->real_size = 1 + varint_len + total;
 }
 
+
+uint32_t packet_encode(mqtt_packet_t *pkt, uint8_t *buf) {
+    return encode(pkt, buf);
+}
 
 void packet_decode(mqtt_packet_t *pkt, uint8_t *buf) {
     decode(buf, pkt);

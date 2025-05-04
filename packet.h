@@ -12,6 +12,22 @@
 #define MQTT_CONNECT_FLAG_WILL 0x04
 #define MQTT_CONNECT_FLAG_CLEAN 0x02
 
+#define MQTT_PKT_CONNECT 0x10
+#define MQTT_PKT_CONNACK 0x20
+#define MQTT_PKT_PUBLISH 0x30
+#define MQTT_PKT_PUBACK 0x40
+#define MQTT_PKT_PUBREC 0x50
+#define MQTT_PKT_PUBREL 0x60
+#define MQTT_PKT_PUBCOMP 0x70
+#define MQTT_PKT_SUBSCRIBE 0x80
+#define MQTT_PKT_SUBACK 0x90
+#define MQTT_PKT_UNSUBSCRIBE 0xA0
+#define MQTT_PKT_UNSUBACK 0xB0
+#define MQTT_PKT_PINGREQ 0xC0
+#define MQTT_PKT_PINGRESP 0xD0
+#define MQTT_PKT_DISCONNECT 0xE0
+
+
 typedef struct {
     uint8_t type;
     uint8_t remainder[4];
@@ -100,9 +116,24 @@ typedef struct {
 
 /************************************************/
 
-void packet_encode(mqtt_packet_t *pkt, uint8_t *buf);
-void packet_connect(mqtt_packet_t *pkt, void *payload, int size);
-void packet_decode(mqtt_packet_t *pkt, uint8_t *buf);
-int packet_subscribe(uint8_t *buf, size_t max, const char *topic);
+typedef struct {
+    uint16_t keepalive;
+    uint8_t flags;
+} mqtt_connect_opt_t;
 
+typedef struct {
+    uint8_t *buf;
+    uint16_t capacity;
+    uint16_t size;
+} mqtt_subscribe_opt_t;
+
+/************************************************/
+
+uint32_t packet_encode(mqtt_packet_t *pkt, uint8_t *buf);
+void packet_connect(mqtt_packet_t *pkt, mqtt_connect_opt_t *opt, void *payload, int payload_size);
+void packet_subscribe(mqtt_packet_t *pkt, mqtt_subscribe_opt_t *opt);
+void packet_decode(mqtt_packet_t *pkt, uint8_t *buf);
+/*
+int packet_subscribe(uint8_t *buf, size_t max, const char *topic);
+*/
 #endif
