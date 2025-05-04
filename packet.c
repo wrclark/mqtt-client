@@ -34,22 +34,24 @@ void packet_encode(mqtt_packet_t *pkt, uint8_t *buf) {
 
 
 void packet_connect(mqtt_packet_t *pkt, void *payload, int size) {
-    int total;
+    int vh_size = 6 + 1 + 1 + 2; 
+    int total = vh_size + size;
     int varint_len;
+
     pkt->fh.type = 0x10;
 
     mqtt_string_encode(pkt->vh.prot, "MQTT");
     pkt->vh.level = 4;
-    pkt->vh.flags = 2; 
+    pkt->vh.flags = 2;
     pkt->vh.keepalive = 60;
 
     pkt->payload = payload;
     pkt->payload_size = size;
 
-    total = 12 + size;
     varint_len = mqtt_varint_encode(pkt->fh.remainder, total);
-    pkt->real_size = 1 + varint_len + total -2;
+    pkt->real_size = 1 + varint_len + total;
 }
+
 
 void packet_decode(mqtt_packet_t *pkt, uint8_t *buf) {
     decode(buf, pkt);

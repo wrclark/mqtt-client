@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "mqtt.h"
@@ -27,19 +28,54 @@ int main() {
     mqtt_packet_t packet;
     uint8_t sbuf[512];
     uint16_t size;
+    int fd;
+    int ret;
 
     memset(&packet, 0, sizeof(packet));
 
-    size = mqtt_string_encode(sbuf, "mqttclientuser123longusername8877!!");
+    size = mqtt_string_encode(sbuf, "cz9cc88484m");
 
     packet_connect(&packet, sbuf, size);
     packet_encode(&packet, buf);
 
+    puts("CONNECT:");
     asciidump(sbuf, size);
     hexdump(buf, packet.real_size);
 
+    fd = mqtt_net_connect("test.mosquitto.org", 1883);
+    if (fd < 0) {
+        fprintf(stderr, "unable to connect\n");
+        exit(1);
+    }
+
+    puts("mqtt_net_connect OK");
+
+    ret = mqtt_net_send(fd, buf, packet.real_size);
+    if (ret != 0) {
+        fprintf(stderr, "error sending data\n");
+        mqtt_net_close(fd);
+        exit(1);
+    }
+
+    puts("mqtt_net_send OK");
+
+    ret = mqtt_net_recv(fd, buf, 2048);
+    if (ret <= 0) {
+        fprintf(stderr, "error receiving data (size=%d)\n", ret);
+        mqtt_net_close(fd);
+        exit(1);
+    }
+
+    puts("mqtt_net_recv OK");
+    printf("recv size: %d\n", ret);
+
     memset(&packet, 0, sizeof (packet));
-    packet_decode(&packet, test_connect_pkt);
+    packet_decode(&packet, buf);
+
+    puts("CONACK:");
+    hexdump(buf, packet.real_size);
+
+    mqtt_net_close(fd);
 
     return 0;
 }
