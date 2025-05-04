@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "mqtt.h"
 #include "mqtt_net.h"
@@ -11,6 +12,7 @@
 
 uint8_t buf[1024*1024] = {0};
 uint8_t subs[4096];
+char *msg = "hello mqtt!!!";
 
 void hexdump(uint8_t *data, long unsigned int size);
 void asciidump(uint8_t *data, long unsigned int size);
@@ -28,7 +30,7 @@ int main() {
     memset(&packet, 0, sizeof(packet));
     memset(&conopt, 0, sizeof(conopt));
     memset(&subopt, 0, sizeof(subopt));
-    size = mqtt_string_encode(sbuf, "cffugdf44", 512);
+    size = mqtt_string_encode(sbuf, "cff44faa4", 512);
 
     conopt.flags |= MQTT_CONNECT_FLAG_CLEAN;
     conopt.keepalive = 60;
@@ -72,12 +74,12 @@ int main() {
     subopt.buf = subs;
     subopt.capacity = 4096;
 
+    sleep(1);
+
     subscribe_topics(&subopt,
                     "test", 0,
-                    "test/topic2", 0,
-                    "test123", 0,
                     "test/topic", 0,
-                    "test/topic5", 0,
+                    "test/test123", 0,
                     NULL);
     
     packet_subscribe(&packet, &subopt);
@@ -117,10 +119,28 @@ int main() {
     puts("SUBACK:");
     hexdump(buf, packet.real_size);
 
+    memset(&packet, 0, sizeof(packet));
+
+    sleep(1);
+    
+    packet_publish(&packet, "test/test123", 0, msg, strlen(msg));
+    packet_encode(&packet, buf);
+    puts("PUBLISH >");
+    hexdump(buf, packet.real_size);
+    asciidump(buf, packet.real_size);
+
+    ret = mqtt_net_send(fd, buf, ret);
+    if (ret != 0) {
+        puts("error sending publish");
+        mqtt_net_close(fd);
+        exit(1);
+    }
+
+
     while (1) {
         ret = mqtt_net_recv(fd, buf, 1024*1024);
         if (ret <= 0) {
-            puts("err");
+            puts("error: mqtt_net_recv() <= 0");
             break;
         }
 

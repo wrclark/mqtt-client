@@ -42,6 +42,32 @@ static uint32_t encode_subscribe(mqtt_packet_t *pkt, uint8_t *buf) {
     return p - buf;
 }
 
+static uint32_t encode_publish(mqtt_packet_t *pkt, uint8_t *buf) {
+    uint8_t *p = buf;
+    int i;
+    uint16_t total;
+
+    *p++ = pkt->fix.type;
+    for (i = 0; i < 4 && pkt->fix.remainder[i]; ++i)
+        *p++ = pkt->fix.remainder[i];
+    
+    total = mqtt_string_encode(p, pkt->var.publish.topic, 2048);
+    p += total;
+
+    /* if QoS > 0 */
+    if (((pkt->fix.type) & 0x06) >> 1) {
+        memcpy(p, &pkt->var.publish.packet_id, 2);
+        p += 2;
+    }
+
+    memcpy(p, pkt->payload, pkt->payload_size);
+    p += pkt->payload_size;
+    printf("payload size: %d\n", pkt->payload_size);
+    printf("payload: %s\n", (const char*)pkt->payload);
+
+    return p - buf;
+}
+
 uint32_t encode(mqtt_packet_t *pkt, uint8_t *buf) {
     uint8_t type = pkt->fix.type & 0xf0;
     printf("type=0x%02X\n", type);
@@ -51,6 +77,9 @@ uint32_t encode(mqtt_packet_t *pkt, uint8_t *buf) {
             break;
         case MQTT_PKT_SUBSCRIBE:
             return encode_subscribe(pkt, buf);
+            break;
+        case MQTT_PKT_PUBLISH:
+            return encode_publish(pkt, buf);
             break;
 
         default:

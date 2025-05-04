@@ -12,6 +12,10 @@
 #define MQTT_CONNECT_FLAG_WILL 0x04
 #define MQTT_CONNECT_FLAG_CLEAN 0x02
 
+#define MQTT_PUBLISH_FLAG_DUP 0x08
+#define MQTT_PUBLISH_FLAG_QOS (0x04 | 0x02)
+#define MQTT_PUBLISH_FLAG_RETAIN 0x01
+
 #define MQTT_PKT_CONNECT 0x10
 #define MQTT_PKT_CONNACK 0x20
 #define MQTT_PKT_PUBLISH 0x30
@@ -132,8 +136,8 @@ typedef struct {
 uint32_t packet_encode(mqtt_packet_t *pkt, uint8_t *buf);
 void packet_connect(mqtt_packet_t *pkt, mqtt_connect_opt_t *opt, void *payload, int payload_size);
 void packet_subscribe(mqtt_packet_t *pkt, mqtt_subscribe_opt_t *opt);
+void packet_publish(mqtt_packet_t *pkt, const char *topic, uint8_t opts, void *payload, int payload_size);
 void packet_decode(mqtt_packet_t *pkt, uint8_t *buf);
-/*
-int packet_subscribe(uint8_t *buf, size_t max, const char *topic);
-*/
+
+
 #endif
