@@ -53,9 +53,9 @@ static uint32_t encode_publish(mqtt_packet_t *pkt, uint8_t *buf) {
     
     total = mqtt_string_encode(p, pkt->var.publish.topic, 2048);
     p += total;
-
+    
     /* if QoS > 0 */
-    if (((pkt->fix.type) & 0x06) >> 1) {
+    if (pkt->fix.type & MQTT_PUBLISH_FLAG_QOS) {
         memcpy(p, &pkt->var.publish.packet_id, 2);
         p += 2;
     }

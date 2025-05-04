@@ -30,7 +30,7 @@ int main() {
     memset(&packet, 0, sizeof(packet));
     memset(&conopt, 0, sizeof(conopt));
     memset(&subopt, 0, sizeof(subopt));
-    size = mqtt_string_encode(sbuf, "cff44faa4", 512);
+    size = mqtt_string_encode(sbuf, "cff4sdfaa4", 512);
 
     conopt.flags |= MQTT_CONNECT_FLAG_CLEAN;
     conopt.keepalive = 60;
@@ -77,9 +77,10 @@ int main() {
     sleep(1);
 
     subscribe_topics(&subopt,
+                    /*"test", 0,
+                    "test/topic", 0,*/
                     "test", 0,
-                    "test/topic", 0,
-                    "test/test123", 0,
+                    "test/asdas", 0,
                     NULL);
     
     packet_subscribe(&packet, &subopt);
@@ -123,8 +124,10 @@ int main() {
 
     sleep(1);
     
-    packet_publish(&packet, "test/test123", 0, msg, strlen(msg));
-    packet_encode(&packet, buf);
+    memset(buf, 0, 1024);
+
+    packet_publish(&packet, "test/asdas", 0, msg, strlen(msg));
+    ret = packet_encode(&packet, buf);
     puts("PUBLISH >");
     hexdump(buf, packet.real_size);
     asciidump(buf, packet.real_size);
@@ -135,6 +138,8 @@ int main() {
         mqtt_net_close(fd);
         exit(1);
     }
+
+    printf("ret=%d\n", ret);
 
 
     while (1) {

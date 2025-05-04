@@ -43,7 +43,6 @@ void packet_subscribe(mqtt_packet_t *pkt, mqtt_subscribe_opt_t *opt) {
 void packet_publish(mqtt_packet_t *pkt, const char *topic, uint8_t opts, void *payload, int payload_size) {
     uint16_t total = 0;
     uint8_t varint_len;
-    uint8_t qos = (opts & 0x06) >> 1;
 
     pkt->fix.type = MQTT_PKT_PUBLISH | opts;
     pkt->payload = payload;
@@ -51,10 +50,10 @@ void packet_publish(mqtt_packet_t *pkt, const char *topic, uint8_t opts, void *p
     pkt->var.publish.topic = (void *)topic;
     pkt->var.publish.topic_length = strlen(topic);
 
-    total = 2 + pkt->var.publish.topic_length; 
+    total = pkt->var.publish.topic_length + 2; 
 
     /* packet identifier (only if QoS > 0) */
-    if (qos > 0) {
+    if (pkt->fix.type & MQTT_PUBLISH_FLAG_QOS) {
         pkt->var.publish.packet_id = htons(1);
         total += 2;
     }
