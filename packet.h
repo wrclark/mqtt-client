@@ -35,5 +35,5 @@ enum PacketType {
 void packet_encode(mqtt_packet_t *pkt, uint8_t *buf);
 void packet_connect(mqtt_packet_t *pkt, void *payload, int size);
 void packet_decode(mqtt_packet_t *pkt, uint8_t *buf);
-
+int packet_subscribe(uint8_t *buf, size_t max, const char *topic);
 #endif

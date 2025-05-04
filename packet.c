@@ -52,6 +52,29 @@ void packet_connect(mqtt_packet_t *pkt, void *payload, int size) {
     pkt->real_size = 1 + varint_len + total;
 }
 
+int packet_subscribe(uint8_t *buf, size_t max, const char *topic) {
+    uint16_t pkt_id = htons(1);
+    uint16_t topic_len = htons(strlen(topic));
+    uint32_t rem;
+    uint8_t *p = buf;
+
+    (void) max;
+
+    *p++ = 0x82; /* SUBSCRIBE | flags */
+    rem = 2 + 2 + strlen(topic) + 1;
+    p += mqtt_varint_encode(p, rem);
+
+    memcpy(p, &pkt_id, 2); 
+    p += 2;
+    memcpy(p, &topic_len, 2);
+    p += 2;
+    memcpy(p, topic, strlen(topic));
+    p += strlen(topic);
+    *p++ = 0; /* qos 0 */
+
+    return  p - buf;  /* real size */
+}
+
 
 void packet_decode(mqtt_packet_t *pkt, uint8_t *buf) {
     decode(buf, pkt);

@@ -73,7 +73,36 @@ int main() {
     packet_decode(&packet, buf);
 
     puts("CONACK:");
-    hexdump(buf, packet.real_size);
+    hexdump(buf, ret);
+
+    ret = packet_subscribe(buf, 1024, "test/topic");
+    puts("SUBSCRIBE:");
+    hexdump(buf, ret);
+
+    ret = mqtt_net_send(fd, buf, ret);
+    if (ret != 0) {
+        puts("error sending subscribe");
+        mqtt_net_close(fd);
+        exit(1);
+    }
+
+    puts("mqtt_net_send SUBSCRIBE OK");
+
+    ret = mqtt_net_recv(fd, buf, 2048);
+    if (ret <= 0) {
+        fprintf(stderr, "error receiving data (size=%d)\n", ret);
+        mqtt_net_close(fd);
+        exit(1);
+    }
+
+    puts("mqtt_net_recv SUBACK OK");
+    printf("recv size: %d\n", ret);
+
+    memset(&packet, 0, sizeof (packet));
+    packet_decode(&packet, buf);
+
+    puts("SUBACK:");
+    hexdump(buf, ret);
 
     mqtt_net_close(fd);
 
