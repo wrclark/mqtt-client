@@ -76,6 +76,8 @@ int main() {
                     "test", 0,
                     "test/topic2", 0,
                     "test123", 0,
+                    "test/topic", 0,
+                    "test/topic5", 0,
                     NULL);
     
     packet_subscribe(&packet, &subopt);
@@ -113,7 +115,7 @@ int main() {
     packet_decode(&packet, buf);
 
     puts("SUBACK:");
-    hexdump(buf, ret);
+    hexdump(buf, packet.real_size);
 
     while (1) {
         ret = mqtt_net_recv(fd, buf, 1024*1024);
