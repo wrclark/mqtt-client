@@ -2,7 +2,6 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 
 #include "mqtt.h"
 #include "mqtt_net.h"
@@ -44,8 +43,6 @@ int main() {
         exit(1);
     }
 
-    puts("mqtt_net_connect OK");
-
     ret = mqtt_net_send(fd, buf, packet.real_size);
     if (ret != 0) {
         fprintf(stderr, "error sending data\n");
@@ -53,8 +50,6 @@ int main() {
         exit(1);
     }
 
-    puts("mqtt_net_send OK");
-
     ret = mqtt_net_recv(fd, buf, 1024*1024);
     if (ret <= 0) {
         fprintf(stderr, "error receiving data (size=%d)\n", ret);
@@ -62,39 +57,21 @@ int main() {
         exit(1);
     }
 
-    puts("mqtt_net_recv OK");
-    printf("recv size: %d\n", ret);
-
     memset(&packet, 0, sizeof (packet));
     packet_decode(&packet, buf);
-
-    puts("CONACK:");
-    hexdump(buf, ret);
 
     subopt.buf = subs;
     subopt.capacity = 4096;
 
-    sleep(1);
-
     subscribe_topics(&subopt,
-                    /*"test", 0,
-                    "test/topic", 0,*/
                     "test", 0,
-                    "test/asdas", 0,
+                    "test/topic", 0,
+                    "test/topic123", 0,
                     NULL);
     
     packet_subscribe(&packet, &subopt);
-    asciidump(subopt.buf, subopt.size);
-    hexdump(subopt.buf, subopt.size);
+
     ret = packet_encode(&packet, buf);
-
-    printf("ret=%d\n", ret);
-
-    puts("SUBSCRIBE:");
-
-    asciidump(buf, packet.real_size);
-    hexdump(buf, packet.real_size);
-
     ret = mqtt_net_send(fd, buf, ret);
     if (ret != 0) {
         puts("error sending subscribe");
@@ -102,8 +79,6 @@ int main() {
         exit(1);
     }
 
-    puts("mqtt_net_send SUBSCRIBE OK");
-
     ret = mqtt_net_recv(fd, buf, 1024*1024);
     if (ret <= 0) {
         fprintf(stderr, "error receiving data (size=%d)\n", ret);
@@ -111,26 +86,11 @@ int main() {
         exit(1);
     }
 
-    puts("mqtt_net_recv SUBACK OK");
-    printf("recv size: %d\n", ret);
-
-    memset(&packet, 0, sizeof (packet));
     packet_decode(&packet, buf);
-
-    puts("SUBACK:");
-    hexdump(buf, packet.real_size);
-
-    memset(&packet, 0, sizeof(packet));
-
-    sleep(1);
-    
-    memset(buf, 0, 1024);
 
     packet_publish(&packet, "test/asdas", 0, msg, strlen(msg));
     ret = packet_encode(&packet, buf);
-    puts("PUBLISH >");
-    hexdump(buf, packet.real_size);
-    asciidump(buf, packet.real_size);
+
 
     ret = mqtt_net_send(fd, buf, ret);
     if (ret != 0) {
@@ -139,9 +99,6 @@ int main() {
         exit(1);
     }
 
-    printf("ret=%d\n", ret);
-
-
     while (1) {
         ret = mqtt_net_recv(fd, buf, 1024*1024);
         if (ret <= 0) {
@@ -149,7 +106,6 @@ int main() {
             break;
         }
 
-        printf("size=%d\n", ret);
         packet_decode(&packet, buf);
     }
 
