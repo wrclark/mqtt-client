@@ -40,7 +40,7 @@ void packet_connect(mqtt_packet_t *pkt, void *payload, int size) {
 
     pkt->fh.type = 0x10;
 
-    mqtt_string_encode(pkt->vh.prot, "MQTT");
+    mqtt_string_encode(pkt->vh.prot, "MQTT", 6);
     pkt->vh.level = 4;
     pkt->vh.flags = 2;
     pkt->vh.keepalive = 60;

@@ -33,7 +33,7 @@ int main() {
 
     memset(&packet, 0, sizeof(packet));
 
-    size = mqtt_string_encode(sbuf, "cz9cc88484m");
+    size = mqtt_string_encode(sbuf, "cz9cc88484m", 512);
 
     packet_connect(&packet, sbuf, size);
     packet_encode(&packet, buf);
@@ -103,6 +103,17 @@ int main() {
 
     puts("SUBACK:");
     hexdump(buf, ret);
+
+    while (1) {
+        ret = mqtt_net_recv(fd, buf, 2048);
+        if (ret <= 0) {
+            puts("err");
+            break;
+        }
+
+        printf("size=%d\n", ret);
+        packet_decode(&packet, buf);
+    }
 
     mqtt_net_close(fd);
 
