@@ -13,18 +13,18 @@ void packet_encode(mqtt_packet_t *pkt, uint8_t *buf) {
     uint8_t *p = buf;
 
     /* fixed header */
-    *p++ = pkt->fh.type;
-    for (i = 0; i < 4 && pkt->fh.remainder[i]; ++i)
-        *p++ = pkt->fh.remainder[i];
+    *p++ = pkt->fix.type;
+    for (i = 0; i < 4 && pkt->fix.remainder[i]; ++i)
+        *p++ = pkt->fix.remainder[i];
 
     /* variable header */
-    memcpy(p, pkt->vh.prot, 6);
+    memcpy(p, pkt->var.connect.prot, 6);
     p += 6;
 
-    *p++ = pkt->vh.level;
-    *p++ = pkt->vh.flags;
+    *p++ = pkt->var.connect.level;
+    *p++ = pkt->var.connect.flags;
 
-    ka_be = htons(pkt->vh.keepalive);
+    ka_be = htons(pkt->var.connect.keepalive);
     memcpy(p, &ka_be, 2);
     p += 2;
 
@@ -38,17 +38,17 @@ void packet_connect(mqtt_packet_t *pkt, void *payload, int size) {
     int total = vh_size + size;
     int varint_len;
 
-    pkt->fh.type = 0x10;
+    pkt->fix.type = 0x10;
 
-    mqtt_string_encode(pkt->vh.prot, "MQTT", 6);
-    pkt->vh.level = 4;
-    pkt->vh.flags = 2;
-    pkt->vh.keepalive = 60;
+    mqtt_string_encode(pkt->var.connect.prot, "MQTT", 6);
+    pkt->var.connect.level = 4;
+    pkt->var.connect.flags = 2;
+    pkt->var.connect.keepalive = 60;
 
     pkt->payload = payload;
     pkt->payload_size = size;
 
-    varint_len = mqtt_varint_encode(pkt->fh.remainder, total);
+    varint_len = mqtt_varint_encode(pkt->fix.remainder, total);
     pkt->real_size = 1 + varint_len + total;
 }
 
