@@ -74,7 +74,7 @@ int main() {
 
     subscribe_topics(&subopt,
                     "test", 0,
-                    "test/topic", 0,
+                    "test/topic2", 0,
                     "test123", 0,
                     NULL);
     
