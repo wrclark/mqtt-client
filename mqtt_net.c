@@ -9,6 +9,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include "config.h"
 #include "mqtt_net.h"
 
 int mqtt_net_connect(const char *addr, uint16_t port) {
@@ -65,12 +66,55 @@ size_t mqtt_net_send(int fd, void *pkt, size_t size) {
     return total;
 }
 
-size_t mqtt_net_recv(int fd, void *buf, size_t max) {
-    ssize_t received = recv(fd, buf, max, 0);
-    if (received < 0) {
-        perror("mqtt_net_recv: recv()");
+ssize_t mqtt_net_recv(int fd, uint8_t *buf, size_t bufsiz) {
+    uint32_t remaining_len;
+    size_t total = 0;
+    size_t packet_len;
+    ssize_t r;
+    uint8_t used = 0;
+
+    /* read fixed header, 2-5 bytes */
+    while (total < 5) {
+        r = recv(fd, buf + total, 5 - total, 0);
+        if (r < 0) {
+            perror("mqtt_net_recv: recv() [1]");
+            return -1;
+        } else if (r == 0) {
+            return 0; /* closed */
+        }
+        total += r;
+
+        /* parse remainder and wait for it */
+        remaining_len = mqtt_varint_decode(buf + 1, &used);
+
+        /*if (remaining_len > MAX_PACKET_SIZE) {
+            fprintf(stderr, "server sent pkt too large\n");
+            mqtt_net_close(fd);
+            return -1;
+        } */
+
+        if (used > 0 && (1 + used + remaining_len) <= bufsiz) {
+            break; /* OK */
+        }
+    }
+
+    packet_len = 1 + used + remaining_len;
+    if (packet_len > bufsiz) {
+        fprintf(stderr, "packet too large (%lu)\n", packet_len);
         return -1;
     }
 
-    return (size_t)received;
+    /* read remainder */
+    while (total < packet_len) {
+        r = recv(fd, buf + total, packet_len - total, 0);
+        if (r < 0) {
+            perror("mqtt_net_recv: recv() [2]");
+            return -1;
+        } else if (r == 0) {
+            return 0; /* closed */
+        }
+        total += r;
+    }
+
+    return total;
 }

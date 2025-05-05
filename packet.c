@@ -70,6 +70,6 @@ uint32_t packet_encode(mqtt_packet_t *pkt, uint8_t *buf) {
     return encode(pkt, buf);
 }
 
-void packet_decode(mqtt_packet_t *pkt, uint8_t *buf) {
-    decode(buf, pkt);
+void packet_decode(mqtt_packet_t *pkt, size_t pktsiz, uint8_t *buf, size_t bufsiz) {
+    decode(pkt, pktsiz, buf, bufsiz);
 }

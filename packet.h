@@ -137,7 +137,7 @@ uint32_t packet_encode(mqtt_packet_t *pkt, uint8_t *buf);
 void packet_connect(mqtt_packet_t *pkt, mqtt_connect_opt_t *opt, void *payload, size_t payload_size);
 void packet_subscribe(mqtt_packet_t *pkt, mqtt_subscribe_opt_t *opt);
 void packet_publish(mqtt_packet_t *pkt, const char *topic, uint8_t opts, void *payload, size_t payload_size);
-void packet_decode(mqtt_packet_t *pkt, uint8_t *buf);
+void packet_decode(mqtt_packet_t *pkt, size_t pktsiz, uint8_t *buf, size_t bufsiz);
 
 
 #endif

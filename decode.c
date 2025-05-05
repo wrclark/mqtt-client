@@ -4,28 +4,31 @@
 
 #include "decode.h"
 
-static int decode_connect(uint8_t *buf, mqtt_packet_t *pkt) {
+static int decode_connect(const uint8_t *buf, size_t bufsiz, mqtt_packet_t *pkt, size_t pktsiz) {
     uint8_t used=0;
-    uint16_t size=0;
-    uint8_t strings[2048];
-    uint8_t *p = buf;
+    uint16_t offset=0;
+    uint8_t strings[1024];
+    const uint8_t *p = buf;
+
+    (void) bufsiz;
+    (void) pktsiz;
 
 
     printf("flags: %x\n", *p++ & 0x0f);
     printf("remaining length: %u\n", mqtt_varint_decode(p, &used));
     p += used;
     printf("used: %d\n", used);
-    size=mqtt_string_decode(p, strings, 2048);
-    strings[size]=0;
+    offset=mqtt_string_decode(p, strings, 1024);
+    strings[offset]=0;
     printf("protocol: %s\n", strings);
-    printf("size: %u\n", size);
-    p += (size + 2);
+    printf("offset: %u\n", offset);
+    p += (offset + 2);
     printf("protocol level: %d\n", *p++);
     printf("connect flags: %d\n", *p++);
     printf("keep alive: %d\n", *(p+1) | (*p << 8));
     p += 2;
-    size=mqtt_string_decode(p, strings, 2048);
-    strings[size]=0;
+    offset=mqtt_string_decode(p, strings, 1024);
+    strings[offset]=0;
     printf("payload: %s\n", strings);
 
     pkt->real_size = p - buf;
@@ -34,20 +37,18 @@ static int decode_connect(uint8_t *buf, mqtt_packet_t *pkt) {
     return 0;
 }
 
-static void decode_publish(uint8_t *buf, mqtt_packet_t *pkt) {
+static void decode_publish(const uint8_t *buf, size_t bufsiz, mqtt_packet_t *pkt, size_t pktsiz) {
     uint8_t used = 0;
-    char strings[64000]; /* topic buffer, fixed size */
+    char strings[1024]; /* topic buffer, fixed size */
     uint32_t plen;
     uint32_t i;
     uint8_t flags;
-    uint8_t qos;
     uint16_t topic_len;
-    uint8_t *p = buf;
+    const uint8_t *p = buf;
 
+    (void) bufsiz;
 
     flags = *p;
-    qos = (flags & 0x06) >> 1;
-
     printf("flags=%d ", flags & 0x0F);
     p++;
 
@@ -56,9 +57,8 @@ static void decode_publish(uint8_t *buf, mqtt_packet_t *pkt) {
 
     printf("remain=%u ", plen);
 
-    /* Defensive check: remaining length must be at least 2 bytes for topic_len */
     if (plen < 2) {
-        printf("Malformed packet: not enough data for topic length\n");
+        printf("not enough data for topic length\n");
         return;
     }
 
@@ -71,7 +71,7 @@ static void decode_publish(uint8_t *buf, mqtt_packet_t *pkt) {
     }
 
     if (plen < topic_len) {
-        printf("Malformed packet: topic length exceeds remaining length\n");
+        printf("topic length exceeds remaining length\n");
         return;
     }
 
@@ -81,14 +81,19 @@ static void decode_publish(uint8_t *buf, mqtt_packet_t *pkt) {
     p += topic_len;
     plen -= topic_len;
 
-    if (qos > 0) {
-        /* Need 2 bytes for Packet Identifier */
+    if (flags & MQTT_PUBLISH_FLAG_QOS) {
         if (plen < 2) {
-            printf("Malformed packet: missing packet identifier\n");
+            printf("missing packet identifier\n");
             return;
         }
         p += 2;
         plen -= 2;
+    }
+
+    if ((size_t)(p + plen - buf) > pktsiz) {
+        printf("truncating payload: plen=%u -> ", plen);
+        plen = pktsiz - (p - buf);
+        printf("%u\n", plen);
     }
 
     printf("payload: ");
@@ -97,17 +102,20 @@ static void decode_publish(uint8_t *buf, mqtt_packet_t *pkt) {
     }
     putchar('\n');
 
-    pkt->real_size = p - buf;
-
+    pkt->real_size = (p + plen) - buf;
 }
 
-static void decode_suback(uint8_t *buf, mqtt_packet_t *pkt) {
-    uint8_t *p = buf;
+
+static void decode_suback(const uint8_t *buf, size_t bufsiz, mqtt_packet_t *pkt, size_t pktsiz) {
+    const uint8_t *p = buf;
     uint8_t flags = *p++ & 0x0f;
     uint8_t used;
     uint32_t rem;
     uint8_t ret;
     uint32_t i;
+
+    (void) bufsiz;
+    (void) pktsiz;
 
 
     printf("flags: 0x%02x\n", flags);
@@ -127,23 +135,24 @@ static void decode_suback(uint8_t *buf, mqtt_packet_t *pkt) {
 }
 
 
-int decode(uint8_t *buf, mqtt_packet_t *pkt) {
+int decode(mqtt_packet_t *pkt, size_t pktsiz, const uint8_t *buf, size_t bufsiz) {
     uint8_t type = *buf & 0xf0;
-    printf("[D] type=0x%02X\n", type);
+    printf("[dec] type=0x%02X\n", *buf);
     switch (type & 0xf0) {
         case MQTT_PKT_CONNECT:
-            decode_connect(buf, pkt);
+            printf("CONNECT\n");
+            decode_connect(buf, bufsiz, pkt, pktsiz);
             break;
         case MQTT_PKT_CONNACK:
             printf("CONNACK\n");
             break;
         case MQTT_PKT_PUBLISH:
             printf("PUBLISH\n");
-            decode_publish(buf, pkt);
+            decode_publish(buf, bufsiz, pkt, pktsiz);
             break;
         case MQTT_PKT_SUBACK:
             printf("SUBACK\n");
-            decode_suback(buf, pkt);
+            decode_suback(buf, bufsiz, pkt, pktsiz);
             break;
         
         default:

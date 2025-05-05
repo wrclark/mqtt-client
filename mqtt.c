@@ -6,7 +6,7 @@
 
 #include "mqtt.h"
 
-uint32_t mqtt_varint_decode(uint8_t *data, uint8_t *used) {
+uint32_t mqtt_varint_decode(const uint8_t *data, uint8_t *used) {
     int mult = 1;
     int value = 0;
     int i = 0;
@@ -54,7 +54,7 @@ uint16_t mqtt_string_encode(uint8_t *buf, const char *msg, size_t max) {
     return size + 2;
 }
 
-uint16_t mqtt_string_decode(uint8_t *buf, uint8_t *dest, size_t max) {
+uint16_t mqtt_string_decode(const uint8_t *buf, uint8_t *dest, size_t max) {
     uint16_t size = (buf[0] << 8) | buf[1];
 
     if ((size_t)(size + 2) > max) {
