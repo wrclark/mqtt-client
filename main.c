@@ -3,17 +3,21 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "config.h"
 #include "mqtt.h"
 #include "mqtt_net.h"
 #include "packet.h"
 #include "util.h"
 
+#define SUB_SIZE 512
+#define NICK_SIZE 128
+
 char *msg = "hello mqtt!!!";
 
-uint8_t sendbuf[4096]; /* TX */
-uint8_t recvbuf[4096]; /* RX */
-uint8_t subs[4096];    /* sub topics + qos */
-uint8_t nick[128];     /* join name */
+uint8_t sendbuf[MAX_PACKET_SIZE]; /* TX */
+uint8_t recvbuf[MAX_PACKET_SIZE]; /* RX */
+uint8_t subs[SUB_SIZE];    /* sub topics + qos */
+uint8_t nick[NICK_SIZE + 1];     /* join name */
 
 int main() {
 
@@ -44,7 +48,7 @@ int main() {
 
     puts("--> connect");
     ret = mqtt_net_send(fd, sendbuf, pkt.real_size);
-    if (ret != 0) {
+    if (ret <= 0) {
         fprintf(stderr, "error sending data\n");
         mqtt_net_close(fd);
         exit(1);
@@ -75,7 +79,7 @@ int main() {
     ret = packet_encode(&pkt, sendbuf);
     ret = mqtt_net_send(fd, sendbuf, ret);
     puts("--> subscribe");
-    if (ret != 0) {
+    if (ret <= 0) {
         puts("error sending subscribe");
         mqtt_net_close(fd);
         exit(1);
@@ -96,7 +100,7 @@ int main() {
 
 
     ret = mqtt_net_send(fd, sendbuf, ret);
-    if (ret != 0) {
+    if (ret <= 0) {
         puts("error sending publish");
         mqtt_net_close(fd);
         exit(1);

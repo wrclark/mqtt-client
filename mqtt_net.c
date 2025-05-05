@@ -49,10 +49,10 @@ void mqtt_net_close(int fd) {
     close(fd);
 }
 
-int mqtt_net_send(int fd, void *packet, size_t size) {
+size_t mqtt_net_send(int fd, void *pkt, size_t size) {
     size_t total = 0;
     ssize_t sent;
-    const char *buf = packet;
+    const char *buf = pkt;
 
     while (total < size) {
         sent = send(fd, buf + total, size - total, 0);
@@ -62,15 +62,15 @@ int mqtt_net_send(int fd, void *packet, size_t size) {
         }
         total += sent;
     }
-    return 0;
+    return total;
 }
 
-ssize_t mqtt_net_recv(int fd, void *buf, size_t max) {
+size_t mqtt_net_recv(int fd, void *buf, size_t max) {
     ssize_t received = recv(fd, buf, max, 0);
     if (received < 0) {
         perror("mqtt_net_recv: recv()");
         return -1;
     }
 
-    return received;
+    return (size_t)received;
 }

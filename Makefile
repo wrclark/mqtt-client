@@ -7,10 +7,12 @@ BIN = mqtt
 all: $(BIN)
 
 $(BIN): $(OBJECTS)
-	$(CC) $(CFLAGS) $(OBJECTS) -o $(BIN)
+	@echo ">> $(BIN)"
+	@$(CC) $(CFLAGS) $(OBJECTS) -o $(BIN)
 
 %.o: %.c
-	$(CC) $(CFLAGS) -c $< 
+	@echo "cc $<"
+	@$(CC) $(CFLAGS) -c $< 
 
 clean:
-	@rm -f $(OBJECTS) 
+	@rm -f $(OBJECTS) $(BIN) 
