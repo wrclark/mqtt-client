@@ -18,7 +18,7 @@ void packet_connect(mqtt_packet_t *pkt, mqtt_connect_opt_t *opt, void *payload, 
     mqtt_string_encode(pkt->var.connect.prot, "MQTT", 6);
     pkt->var.connect.level = 4;
     pkt->var.connect.flags = opt->flags;
-    pkt->var.connect.keepalive = htons(opt->keepalive);
+    pkt->var.connect.keepalive = opt->keepalive;
 
     pkt->payload = payload;
     pkt->payload_size = payload_size;

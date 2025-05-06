@@ -17,7 +17,7 @@ char *msg = "hello mqtt!!!";
 uint8_t sendbuf[MAX_PACKET_SIZE]; /* TX */
 uint8_t recvbuf[MAX_PACKET_SIZE]; /* RX */
 uint8_t subs[SUB_SIZE];    /* sub topics + qos */
-uint8_t nick[NICK_SIZE + 1];     /* join name */
+uint8_t connect_pl[1024] = {0};
 
 int main() {
 
@@ -25,19 +25,25 @@ int main() {
     mqtt_connect_opt_t conopt;
     mqtt_subscribe_opt_t subopt;
     ssize_t ret;
-    uint16_t size;
+    size_t size, plsiz;
     int fd;
 
     memset(&pkt, 0, sizeof(pkt));
     memset(&conopt, 0, sizeof(conopt));
     memset(&subopt, 0, sizeof(subopt));
-    size = mqtt_string_encode(nick, "xXxmqttuser1337xXx", 128);
 
     conopt.flags |= MQTT_CONNECT_FLAG_CLEAN;
+    conopt.flags |= MQTT_CONNECT_FLAG_WILL;
     conopt.keepalive = 60;
 
-    packet_connect(&pkt, &conopt, nick, size);
-    packet_encode(&pkt, sendbuf);
+    plsiz = connect_payload(&conopt, connect_pl, 1024, "xXxmqttuser1337xXx",
+        "test/topic", "farewell cruel world", NULL, NULL);
+
+    packet_connect(&pkt, &conopt, connect_pl, plsiz);
+    size = packet_encode(&pkt, sendbuf);
+
+    hexdump(sendbuf, pkt.real_size);
+    printf("size: %lu, plsiz: %lu\n", size, plsiz);
 
     fd = mqtt_net_connect("broker.hivemq.com", 1883);
     if (fd < 0) {

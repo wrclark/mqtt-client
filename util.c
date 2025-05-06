@@ -6,6 +6,33 @@
 
 #include "packet.h"
 
+size_t connect_payload(mqtt_connect_opt_t *con, uint8_t *buf, size_t bufsiz,
+                    const char *client, const char *wt,
+                    const char *wm, const char *user,
+                    const char *pw) {
+    size_t total = 0;
+
+    total += mqtt_string_encode(buf, client, bufsiz - total);
+
+    if (con->flags & MQTT_CONNECT_FLAG_WILL) {
+        if (wt)
+            total += mqtt_string_encode(buf + total, wt, bufsiz - total);
+        if (wm)
+            total += mqtt_string_encode(buf + total, wm, bufsiz - total);
+    }
+
+    if (con->flags & MQTT_CONNECT_FLAG_USERNAME && user) {
+        total += mqtt_string_encode(buf + total, user, bufsiz - total);
+    }
+
+    if (con->flags & MQTT_CONNECT_FLAG_PASSWORD && pw) {
+        total += mqtt_string_encode(buf + total, pw, bufsiz - total);
+    }
+
+    /* TODO check total */
+    return total;
+}
+
 /* take a list of `const char *` subscribe topics */
 /* pack them in a buf the thing expects */
 /* arguments must be specified in pairs: */
