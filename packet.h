@@ -14,6 +14,8 @@
 
 #define MQTT_PUBLISH_FLAG_DUP 0x08
 #define MQTT_PUBLISH_FLAG_QOS (0x04 | 0x02)
+#define MQTT_PUBLISH_FLAG_QOS_2 0x04
+#define MQTT_PUBLISH_FLAG_QOS_1 0x02
 #define MQTT_PUBLISH_FLAG_RETAIN 0x01
 
 #define MQTT_PKT_CONNECT 0x10
@@ -52,7 +54,7 @@ typedef struct {
 
 typedef struct {
     uint16_t topic_length;
-    void *topic;
+    const void *topic;
     uint16_t packet_id;
 } var_header_publish_t;
 
@@ -114,8 +116,8 @@ typedef struct {
     fix_header_t fix;
     var_header_t var;
     void *payload;
-    uint32_t payload_size;
-    uint32_t real_size;
+    size_t payload_size;
+    size_t real_size;
 } mqtt_packet_t;
 
 /************************************************/
@@ -133,7 +135,7 @@ typedef struct {
 
 /************************************************/
 
-uint32_t packet_encode(mqtt_packet_t *pkt, uint8_t *buf);
+size_t packet_encode(mqtt_packet_t *pkt, uint8_t *buf);
 void packet_connect(mqtt_packet_t *pkt, mqtt_connect_opt_t *opt, void *payload, size_t payload_size);
 void packet_subscribe(mqtt_packet_t *pkt, mqtt_subscribe_opt_t *opt);
 void packet_publish(mqtt_packet_t *pkt, const char *topic, uint8_t opts, void *payload, size_t payload_size);

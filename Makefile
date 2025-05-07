@@ -1,18 +1,24 @@
-CC=gcc
-CFLAGS= -std=c89 -O0 -g3 -Wall -Werror -Wextra -pedantic
-CFILES = $(wildcard *.c)
-OBJECTS = $(CFILES:.c=.o)
-BIN = mqtt
+CC      := gcc
+CFLAGS  := -std=c89 -O0 -g3 -Wall -Wextra -Werror -pedantic \
+           -Wconversion -Wshadow -Wcast-qual -Wstrict-prototypes \
+           -Wmissing-prototypes -Wmissing-declarations
+
+CFILES  := $(wildcard *.c)
+OBJECTS := $(CFILES:.c=.o)
+BIN     := mqtt
+
+.PHONY: all clean
 
 all: $(BIN)
 
 $(BIN): $(OBJECTS)
-	@echo ">> $(BIN)"
+	@echo "LD\t$(BIN)"
 	@$(CC) $(CFLAGS) $(OBJECTS) -o $(BIN)
 
 %.o: %.c
-	@echo "cc $<"
-	@$(CC) $(CFLAGS) -c $< 
+	@echo "CC\t$<"
+	@$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
-	@rm -f $(OBJECTS) $(BIN) 
+	@echo ">> Cleaning"
+	@rm -f $(OBJECTS) $(BIN)

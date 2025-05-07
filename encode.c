@@ -4,7 +4,7 @@
 
 #include "encode.h"
 
-static uint32_t encode_connect(mqtt_packet_t *pkt, uint8_t *buf) {
+static size_t encode_connect(mqtt_packet_t *pkt, uint8_t *buf) {
     int i;
     uint16_t ka_be;
     uint8_t *p = buf;
@@ -23,10 +23,10 @@ static uint32_t encode_connect(mqtt_packet_t *pkt, uint8_t *buf) {
     memcpy(p, &ka_be, 2);
     p += 2;
     memcpy(p, pkt->payload, pkt->payload_size);
-    return p - buf;
+    return (size_t)(p - buf);
 }
 
-static uint32_t encode_subscribe(mqtt_packet_t *pkt, uint8_t *buf) {
+static size_t encode_subscribe(mqtt_packet_t *pkt, uint8_t *buf) {
     uint8_t *p = buf;
     int i;
 
@@ -39,10 +39,10 @@ static uint32_t encode_subscribe(mqtt_packet_t *pkt, uint8_t *buf) {
     memcpy(p, pkt->payload, pkt->payload_size);
     p += pkt->payload_size;
 
-    return p - buf;
+    return (size_t)(p - buf);
 }
 
-static uint32_t encode_publish(mqtt_packet_t *pkt, uint8_t *buf) {
+static size_t encode_publish(mqtt_packet_t *pkt, uint8_t *buf) {
     uint8_t *p = buf;
     int i;
     uint16_t total;
@@ -63,10 +63,10 @@ static uint32_t encode_publish(mqtt_packet_t *pkt, uint8_t *buf) {
     memcpy(p, pkt->payload, pkt->payload_size);
     p += pkt->payload_size;
 
-    return p - buf;
+    return (size_t)(p - buf);
 }
 
-uint32_t encode(mqtt_packet_t *pkt, uint8_t *buf) {
+size_t encode(mqtt_packet_t *pkt, uint8_t *buf) {
     uint8_t type = pkt->fix.type & 0xf0;
     printf("[enc] type=0x%02X\n", type);
     switch (type) {
@@ -82,9 +82,9 @@ uint32_t encode(mqtt_packet_t *pkt, uint8_t *buf) {
 
         default:
             printf("unknown type\n");
-            return -1;
+            return 0;
             break;
     }
 
-    return -1;
+    return 0;
 }

@@ -19,7 +19,7 @@ uint8_t recvbuf[MAX_PACKET_SIZE]; /* RX */
 uint8_t subs[SUB_SIZE];    /* sub topics + qos */
 uint8_t connect_pl[1024] = {0};
 
-int main() {
+int main(void) {
 
     mqtt_packet_t pkt;
     mqtt_connect_opt_t conopt;
@@ -27,6 +27,7 @@ int main() {
     ssize_t ret;
     size_t size, plsiz;
     int fd;
+    uint8_t pubopt = 0;
 
     memset(&pkt, 0, sizeof(pkt));
     memset(&conopt, 0, sizeof(conopt));
@@ -67,7 +68,7 @@ int main() {
         exit(1);
     }
 
-    packet_decode(&pkt, ret, recvbuf, MAX_PACKET_SIZE);
+    packet_decode(&pkt, (size_t)ret, recvbuf, MAX_PACKET_SIZE);
 
     subopt.buf = subs;
     subopt.capacity = SUB_SIZE;
@@ -75,7 +76,7 @@ int main() {
     subscribe_topics(&subopt,
                     "test", 0,
                     "test/topic", 0,
-                  /*"test/topic123", 0,*/
+                    "test/topic123", 0,
                     NULL);
     
 
@@ -98,9 +99,11 @@ int main() {
         exit(1);
     }
 
-    packet_decode(&pkt, ret, recvbuf, MAX_PACKET_SIZE);
+    packet_decode(&pkt, (size_t)ret, recvbuf, MAX_PACKET_SIZE);
 
-    packet_publish(&pkt, "test/asdas", 0, msg, strlen(msg));
+    pubopt |= MQTT_PUBLISH_FLAG_RETAIN;
+    pubopt |= MQTT_PUBLISH_FLAG_QOS_1;
+    packet_publish(&pkt, "test/topic", pubopt, msg, strlen(msg));
     packet_encode(&pkt, sendbuf);
 
     puts("--> publish");
@@ -115,7 +118,7 @@ int main() {
         ret = mqtt_net_recv(fd, recvbuf, MAX_PACKET_SIZE);
         if (ret <= 0) {
             puts("error: mqtt_net_recv() <= 0");
-            break;
+            continue;
         }
 
         /* TODO: glue together fragmented pkt */
@@ -124,7 +127,7 @@ int main() {
             continue;
         }
 
-        packet_decode(&pkt, ret, recvbuf, MAX_PACKET_SIZE);
+        packet_decode(&pkt, (size_t)ret, recvbuf, MAX_PACKET_SIZE);
     }
 
     mqtt_net_close(fd);

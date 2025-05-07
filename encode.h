@@ -5,6 +5,6 @@
 
 #include "packet.h"
 
-uint32_t encode(mqtt_packet_t *pkt, uint8_t *buf);
+size_t encode(mqtt_packet_t *pkt, uint8_t *buf);
 
 #endif

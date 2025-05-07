@@ -50,13 +50,13 @@ void mqtt_net_close(int fd) {
     close(fd);
 }
 
-size_t mqtt_net_send(int fd, void *pkt, size_t size) {
-    size_t total = 0;
+ssize_t mqtt_net_send(int fd, void *pkt, size_t size) {
+    ssize_t total = 0;
     ssize_t sent;
     const char *buf = pkt;
 
-    while (total < size) {
-        sent = send(fd, buf + total, size - total, 0);
+    while ((size_t)total < size) {
+        sent = send(fd, buf + total, size - (size_t)total, 0);
         if (sent < 0) {
             perror("mqtt_net_send: send()");
             return -1;
@@ -82,7 +82,7 @@ ssize_t mqtt_net_recv(int fd, uint8_t *buf, size_t bufsiz) {
         } else if (r == 0) {
             return 0; /* closed */
         }
-        total += r;
+        total += (size_t)r;
 
         /* parse remainder and wait for it */
         remaining_len = mqtt_varint_decode(buf + 1, &used);
@@ -113,8 +113,8 @@ ssize_t mqtt_net_recv(int fd, uint8_t *buf, size_t bufsiz) {
         } else if (r == 0) {
             return 0; /* closed */
         }
-        total += r;
+        total += (size_t)r;
     }
 
-    return total;
+    return (ssize_t)total;
 }

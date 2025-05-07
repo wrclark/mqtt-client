@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "packet.h"
+#include "util.h"
 
 size_t connect_payload(mqtt_connect_opt_t *con, uint8_t *buf, size_t bufsiz,
                     const char *client, const char *wt,
@@ -62,7 +63,7 @@ void subscribe_topics(mqtt_subscribe_opt_t *sub, ...) {
             break;
         }
         qos = (uint8_t) va_arg(args, int);
-        length = strlen(str);
+        length = (uint16_t)strlen(str);
         lengthb16 = htons(length);
         memcpy(sub->buf + total, &lengthb16, 2);
         total += 2;

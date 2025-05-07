@@ -4,7 +4,7 @@
 
 #include "decode.h"
 
-static int decode_connect(const uint8_t *buf, size_t bufsiz, mqtt_packet_t *pkt, size_t pktsiz) {
+static void decode_connect(const uint8_t *buf, size_t bufsiz, mqtt_packet_t *pkt, size_t pktsiz) {
     uint8_t used=0;
     uint16_t offset=0;
     uint8_t strings[1024];
@@ -31,16 +31,13 @@ static int decode_connect(const uint8_t *buf, size_t bufsiz, mqtt_packet_t *pkt,
     strings[offset]=0;
     printf("payload: %s\n", strings);
 
-    pkt->real_size = p - buf;
-
-
-    return 0;
+    pkt->real_size = (size_t)(p - buf);
 }
 
 static void decode_publish(const uint8_t *buf, size_t bufsiz, mqtt_packet_t *pkt, size_t pktsiz) {
     uint8_t used = 0;
     char strings[1024]; /* topic buffer, fixed size */
-    uint32_t plen;
+    size_t plen;
     uint32_t i;
     uint8_t flags;
     uint16_t topic_len;
@@ -55,7 +52,7 @@ static void decode_publish(const uint8_t *buf, size_t bufsiz, mqtt_packet_t *pkt
     plen = mqtt_varint_decode(p, &used);
     p += used;
 
-    printf("remain=%u ", plen);
+    printf("remain=%lu ", plen);
 
     if (plen < 2) {
         printf("not enough data for topic length\n");
@@ -91,9 +88,9 @@ static void decode_publish(const uint8_t *buf, size_t bufsiz, mqtt_packet_t *pkt
     }
 
     if ((size_t)(p + plen - buf) > pktsiz) {
-        printf("truncating payload: plen=%u -> ", plen);
-        plen = pktsiz - (p - buf);
-        printf("%u\n", plen);
+        printf("truncating payload: plen=%lu -> ", plen);
+        plen = pktsiz - (size_t)(p - buf);
+        printf("%lu\n", plen);
     }
 
     printf("payload: ");
@@ -102,7 +99,7 @@ static void decode_publish(const uint8_t *buf, size_t bufsiz, mqtt_packet_t *pkt
     }
     putchar('\n');
 
-    pkt->real_size = (p + plen) - buf;
+    pkt->real_size = (size_t)((p + plen) - buf);
 }
 
 
@@ -131,7 +128,7 @@ static void decode_suback(const uint8_t *buf, size_t bufsiz, mqtt_packet_t *pkt,
         printf("QoS=0x%02X\n", ret);
     }
 
-    pkt->real_size = p - buf;
+    pkt->real_size = (size_t)(p - buf);
 }
 
 

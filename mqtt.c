@@ -8,16 +8,16 @@
 
 uint32_t mqtt_varint_decode(const uint8_t *data, uint8_t *used) {
     int mult = 1;
-    int value = 0;
-    int i = 0;
+    uint32_t value = 0;
+    uint8_t i = 0;
     uint8_t b;
 
     do {
         if (i >= 4) {
-            return -1;
+            return 0;
         }
         b = data[i++];
-        value += (b & 0x7F) * mult;
+        value += (uint32_t)((b & 0x7F) * mult);
         mult *= 128;
     } while ((b & 0x80) != 0);
     *used = i; 
@@ -41,11 +41,11 @@ int mqtt_varint_encode(uint8_t *dst, uint32_t n) {
 
 
 uint16_t mqtt_string_encode(uint8_t *buf, const char *msg, size_t max) {
-    uint16_t size = strlen(msg);
+    uint16_t size = (uint16_t)strlen(msg);
     uint16_t sizeb16 = htons(size);
 
     if ((size_t)(size + 2) > max) {
-        return -1;
+        return 0;
     }
     
     memcpy(buf, &sizeb16, 2);
@@ -58,7 +58,7 @@ uint16_t mqtt_string_decode(const uint8_t *buf, uint8_t *dest, size_t max) {
     uint16_t size = (buf[0] << 8) | buf[1];
 
     if ((size_t)(size + 2) > max) {
-        return -1;
+        return 0;
     }
 
     memcpy(dest, buf+2, size);
