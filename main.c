@@ -17,7 +17,7 @@ char *msg = "hello mqtt!!!";
 uint8_t sendbuf[MAX_PACKET_SIZE]; /* TX */
 uint8_t recvbuf[MAX_PACKET_SIZE]; /* RX */
 uint8_t subs[SUB_SIZE];    /* sub topics + qos */
-uint8_t connect_pl[1024] = {0};
+uint8_t connect_pl[1024]; /* connect payload */
 
 void publish_callback(mqtt_packet_t *pkt);
 
@@ -29,7 +29,6 @@ int main(void) {
     mqtt_subscribe_opt_t subopt;
     mqtt_publish_opt_t pubopt;
     ssize_t ret;
-    size_t size, plsiz;
     int fd;
 
     memset(&conf, 0, sizeof(conf));
@@ -47,39 +46,17 @@ int main(void) {
     conf.port = 1883;
 
     /* CONNECT config */
-    conopt.flags |= MQTT_CONNECT_FLAG_CLEAN;
-    conopt.flags |= MQTT_CONNECT_FLAG_WILL;
+    conopt.flags = MQTT_CONNECT_FLAG_CLEAN | MQTT_CONNECT_FLAG_WILL;
     conopt.keepalive = 60;
-
-    plsiz = util_connect_payload(&conopt, connect_pl, 1024, "xXxmqttuser1337xXx",
-        "test/topic", "farewell cruel world", NULL, NULL);
-
-    packet_connect(&pkt, &conopt, connect_pl, plsiz);
-    size = packet_encode(&pkt, sendbuf, MAX_PACKET_SIZE);
-
-    hexdump(sendbuf, pkt.real_size);
-    printf("size: %lu, plsiz: %lu\n", size, plsiz);
+    conopt.payload = connect_pl;
+    conopt.size = 1024;
 
     mqtt_init(&conf);
     fd = conf.fd; /* temp */
 
-    puts("--> connect");
-    ret = mqtt_net_send(fd, sendbuf, pkt.real_size);
-    if (ret <= 0) {
-        fprintf(stderr, "error sending data\n");
-        mqtt_net_close(fd);
-        exit(1);
-    }
-
-    puts("<-- connack");
-    ret = mqtt_net_recv(fd, recvbuf, MAX_PACKET_SIZE);
-    if (ret <= 0) {
-        fprintf(stderr, "error receiving data (size=%ld)\n", ret);
-        mqtt_net_close(fd);
-        exit(1);
-    }
-
-    packet_decode(&pkt, (size_t)ret, recvbuf, MAX_PACKET_SIZE);
+    util_connect_payload(&conopt, "xXxmqttuser1337xXx", "test/topic",
+        "farewell cruel world", NULL, NULL);
+    mqtt_connect(&conf, &conopt, &pkt);
 
     subopt.buf = subs;
     subopt.capacity = SUB_SIZE;

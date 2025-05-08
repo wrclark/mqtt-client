@@ -8,9 +8,9 @@
 #include "packet.h"
 
 
-void packet_connect(mqtt_packet_t *pkt, mqtt_connect_opt_t *opt, void *payload, size_t payload_size) {
+void packet_connect(mqtt_packet_t *pkt, mqtt_connect_opt_t *opt) {
     uint16_t vh_size = 6 + 1 + 1 + 2; 
-    size_t total = vh_size + payload_size;
+    size_t total = vh_size + opt->used;
     uint8_t varint_len;
 
     pkt->fix.type = 0x10;
@@ -20,8 +20,8 @@ void packet_connect(mqtt_packet_t *pkt, mqtt_connect_opt_t *opt, void *payload, 
     pkt->var.connect.flags = opt->flags;
     pkt->var.connect.keepalive = opt->keepalive;
 
-    pkt->payload = payload;
-    pkt->payload_size = payload_size;
+    pkt->payload = opt->payload;
+    pkt->payload_size = opt->used;
 
     varint_len = (uint8_t)mqtt_varint_encode(pkt->fix.remainder, (uint32_t)total);
     pkt->real_size = (size_t)(1 + varint_len + total);

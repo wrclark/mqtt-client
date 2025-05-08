@@ -8,31 +8,31 @@
 #include "util.h"
 #include "mqtt.h"
 
-size_t util_connect_payload(mqtt_connect_opt_t *con, uint8_t *buf, size_t bufsiz,
-                    const char *client, const char *wt,
-                    const char *wm, const char *user,
-                    const char *pw) {
+void util_connect_payload(mqtt_connect_opt_t *con, const char *client,
+                    const char *wt, const char *wm,
+                    const char *user, const char *pw) {
     size_t total = 0;
+    uint8_t *p = con->payload;
 
-    total += mqtt_string_encode(buf, client, bufsiz - total);
+    total += mqtt_string_encode(con->payload, client, con->size - total);
 
     if (con->flags & MQTT_CONNECT_FLAG_WILL) {
         if (wt)
-            total += mqtt_string_encode(buf + total, wt, bufsiz - total);
+            total += mqtt_string_encode(p + total, wt, con->size - total);
         if (wm)
-            total += mqtt_string_encode(buf + total, wm, bufsiz - total);
+            total += mqtt_string_encode(p + total, wm, con->size - total);
     }
 
     if (con->flags & MQTT_CONNECT_FLAG_USERNAME && user) {
-        total += mqtt_string_encode(buf + total, user, bufsiz - total);
+        total += mqtt_string_encode(p + total, user, con->size - total);
     }
 
     if (con->flags & MQTT_CONNECT_FLAG_PASSWORD && pw) {
-        total += mqtt_string_encode(buf + total, pw, bufsiz - total);
+        total += mqtt_string_encode(p + total, pw, con->size - total);
     }
 
     /* TODO check total */
-    return total;
+    con->used = total;
 }
 
 /* take a list of `const char *` subscribe topics */

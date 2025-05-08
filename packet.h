@@ -125,6 +125,9 @@ typedef struct {
 typedef struct {
     uint16_t keepalive;
     uint8_t flags;
+    void *payload;
+    size_t size;
+    size_t used; 
 } mqtt_connect_opt_t;
 
 typedef struct {
@@ -143,7 +146,7 @@ typedef struct {
 /************************************************/
 
 size_t packet_encode(mqtt_packet_t *pkt, uint8_t *buf, size_t size);
-void packet_connect(mqtt_packet_t *pkt, mqtt_connect_opt_t *opt, void *payload, size_t payload_size);
+void packet_connect(mqtt_packet_t *pkt, mqtt_connect_opt_t *opt);
 void packet_subscribe(mqtt_packet_t *pkt, mqtt_subscribe_opt_t *opt);
 void packet_publish(mqtt_packet_t *pkt, const char *topic, uint8_t opts, void *payload, size_t payload_size);
 void packet_decode(mqtt_packet_t *pkt, size_t pktsiz, uint8_t *buf, size_t bufsiz);
