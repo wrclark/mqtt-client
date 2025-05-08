@@ -51,7 +51,7 @@ int main(void) {
     conopt.flags |= MQTT_CONNECT_FLAG_WILL;
     conopt.keepalive = 60;
 
-    plsiz = connect_payload(&conopt, connect_pl, 1024, "xXxmqttuser1337xXx",
+    plsiz = util_connect_payload(&conopt, connect_pl, 1024, "xXxmqttuser1337xXx",
         "test/topic", "farewell cruel world", NULL, NULL);
 
     packet_connect(&pkt, &conopt, connect_pl, plsiz);
@@ -84,33 +84,15 @@ int main(void) {
     subopt.buf = subs;
     subopt.capacity = SUB_SIZE;
 
-    subscribe_topics(&subopt,
+    util_subscribe_topics(&subopt,
                     "test", 0,
                     "test/topic", 0,
                     "test/topic123", 0,
                     NULL);
     
 
-    packet_subscribe(&pkt, &subopt);
-    packet_encode(&pkt, sendbuf, MAX_PACKET_SIZE);
+    mqtt_subscribe(&conf, &subopt, &pkt);
 
-    puts("--> subscribe");
-    ret = mqtt_net_send(fd, sendbuf, pkt.real_size);
-    if (ret <= 0) {
-        puts("error sending subscribe");
-        mqtt_net_close(fd);
-        exit(1);
-    }
-
-    puts("<-- suback");
-    ret = mqtt_net_recv(fd, recvbuf, MAX_PACKET_SIZE);
-    if (ret <= 0) {
-        fprintf(stderr, "error receiving data (size=%ld)\n", ret);
-        mqtt_net_close(fd);
-        exit(1);
-    }
-
-    packet_decode(&pkt, (size_t)ret, recvbuf, MAX_PACKET_SIZE);
 
     pubopt.flags = MQTT_PUBLISH_FLAG_QOS_0;
     pubopt.topic = "test/topic";

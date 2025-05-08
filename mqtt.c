@@ -98,3 +98,27 @@ int mqtt_publish(mqtt_conf_t *conf, mqtt_publish_opt_t *opt, mqtt_packet_t *pkt)
 
     return 0;
 }
+
+int mqtt_subscribe(mqtt_conf_t *conf, mqtt_subscribe_opt_t *opt, mqtt_packet_t *pkt) {
+    ssize_t ret;
+    packet_subscribe(pkt, opt);
+    packet_encode(pkt, conf->buf, conf->size);
+
+    ret = mqtt_net_send(conf->fd, conf->buf, pkt->real_size);
+    if (ret <= 0) {
+        puts("error sending subscribe");
+        mqtt_net_close(conf->fd);
+        return 1;
+    }
+
+    /* wait for suback ... */
+    ret = mqtt_net_recv(conf->fd, conf->buf, conf->size);
+    if (ret <= 0) {
+        fprintf(stderr, "error receiving data (size=%ld)\n", ret);
+        mqtt_net_close(conf->fd);
+        return 1;
+    }
+
+    packet_decode(pkt, (size_t)ret, conf->buf, conf->size);
+    return 0;
+}

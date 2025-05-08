@@ -8,7 +8,7 @@
 #include "util.h"
 #include "mqtt.h"
 
-size_t connect_payload(mqtt_connect_opt_t *con, uint8_t *buf, size_t bufsiz,
+size_t util_connect_payload(mqtt_connect_opt_t *con, uint8_t *buf, size_t bufsiz,
                     const char *client, const char *wt,
                     const char *wm, const char *user,
                     const char *pw) {
@@ -48,7 +48,7 @@ size_t connect_payload(mqtt_connect_opt_t *con, uint8_t *buf, size_t bufsiz,
                 "test/topic1", 1,
                 NULL);
 */
-void subscribe_topics(mqtt_subscribe_opt_t *sub, ...) {
+void util_subscribe_topics(mqtt_subscribe_opt_t *sub, ...) {
     va_list args;
     const char *str;
     uint8_t qos;
