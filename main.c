@@ -32,15 +32,21 @@ int main(void) {
     size_t size, plsiz;
     int fd;
 
+    memset(&conf, 0, sizeof(conf));
+    memset(&pkt, 0, sizeof(pkt));
+    memset(&conopt, 0, sizeof(conopt));
+    memset(&subopt, 0, sizeof(subopt));
+    memset(&pubopt, 0, sizeof(pubopt));
+
+    /* general config */
     conf.publish = publish_callback;
     conf.suback = NULL;
     conf.buf = sendbuf;
     conf.size = MAX_PACKET_SIZE;
+    conf.broker = "broker.hivemq.com";
+    conf.port = 1883;
 
-    memset(&pkt, 0, sizeof(pkt));
-    memset(&conopt, 0, sizeof(conopt));
-    memset(&subopt, 0, sizeof(subopt));
-
+    /* CONNECT config */
     conopt.flags |= MQTT_CONNECT_FLAG_CLEAN;
     conopt.flags |= MQTT_CONNECT_FLAG_WILL;
     conopt.keepalive = 60;
@@ -54,13 +60,8 @@ int main(void) {
     hexdump(sendbuf, pkt.real_size);
     printf("size: %lu, plsiz: %lu\n", size, plsiz);
 
-    fd = mqtt_net_connect("broker.hivemq.com", 1883);
-    if (fd < 0) {
-        fprintf(stderr, "unable to connect\n");
-        exit(1);
-    }
-
-    conf.fd = fd;
+    mqtt_init(&conf);
+    fd = conf.fd; /* temp */
 
     puts("--> connect");
     ret = mqtt_net_send(fd, sendbuf, pkt.real_size);

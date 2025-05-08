@@ -14,6 +14,8 @@ typedef struct {
     void *buf;
     size_t size;
     int fd;
+    char *broker;
+    uint16_t port;
 } mqtt_conf_t;
 
 /************************************************/
@@ -24,6 +26,8 @@ int      mqtt_varint_encode(uint8_t *dst, uint32_t n);
 uint16_t mqtt_string_encode(uint8_t *buf, const char *msg, size_t max);
 uint16_t mqtt_string_decode(const uint8_t *buf, uint8_t *dest, size_t max);
 
+int mqtt_init(mqtt_conf_t *conf);
 int mqtt_publish(mqtt_conf_t *conf, mqtt_publish_opt_t *opt, mqtt_packet_t *pkt);
+
 
 #endif

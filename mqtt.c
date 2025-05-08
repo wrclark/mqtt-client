@@ -67,6 +67,18 @@ uint16_t mqtt_string_decode(const uint8_t *buf, uint8_t *dest, size_t max) {
     return size;
 }
 
+
+int mqtt_init(mqtt_conf_t *conf) {
+    int fd;
+    fd = mqtt_net_connect(conf->broker, conf->port);
+    if (fd < 0) {
+        fprintf(stderr, "unable to connect\n");
+        return 1;
+    }
+    conf->fd = fd;
+    return 0;
+}
+
 int mqtt_publish(mqtt_conf_t *conf, mqtt_publish_opt_t *opt, mqtt_packet_t *pkt) {
     ssize_t ret;
 
