@@ -14,8 +14,7 @@
 
 char *msg = "hello mqtt!!!";
 
-uint8_t sendbuf[MAX_PACKET_SIZE]; /* TX */
-uint8_t recvbuf[MAX_PACKET_SIZE]; /* RX */
+uint8_t pktbuf[MAX_PACKET_SIZE];
 uint8_t subs[SUB_SIZE];    /* sub topics + qos */
 uint8_t connect_pl[1024]; /* connect payload */
 
@@ -38,12 +37,11 @@ int main(void) {
     memset(&pubopt, 0, sizeof(pubopt));
 
     /* general config */
-    conf.publish = publish_callback;
-    conf.suback = NULL;
-    conf.buf = sendbuf;
-    conf.size = MAX_PACKET_SIZE;
     conf.broker = "broker.hivemq.com";
     conf.port = 1883;
+    conf.buf = pktbuf;
+    conf.size = MAX_PACKET_SIZE;
+    conf.publish = publish_callback;
 
     /* CONNECT config */
     conopt.flags = MQTT_CONNECT_FLAG_CLEAN | MQTT_CONNECT_FLAG_WILL;
@@ -51,46 +49,45 @@ int main(void) {
     conopt.payload = connect_pl;
     conopt.size = 1024;
 
-    mqtt_init(&conf);
-    fd = conf.fd; /* temp */
-
-    util_connect_payload(&conopt, "xXxmqttuser1337xXx", "test/topic",
-        "farewell cruel world", NULL, NULL);
-    mqtt_connect(&conf, &conopt, &pkt);
-
+    /* SUBSCRIBE config */
     subopt.buf = subs;
     subopt.capacity = SUB_SIZE;
 
-    util_subscribe_topics(&subopt,
-                    "test", 0,
-                    "test/topic", 0,
-                    "test/topic123", 0,
-                    NULL);
-    
+    /* create socket */
+    mqtt_init(&conf);
+    fd = conf.fd; /* temp */
 
+    /* generate payload for CONNECT pkt */
+    util_connect_payload(&conopt, "xXxmqttuser1337xXx", "test/topic",
+                        "farewell cruel world", NULL, NULL);
+    mqtt_connect(&conf, &conopt, &pkt);
+
+
+    /* generate payload for SUBSCRIBE pkt */
+    util_subscribe_topics(&subopt,
+                          "test", 0,
+                          "test/topic", 0,
+                          "test/topic123", 0,
+                          NULL);
     mqtt_subscribe(&conf, &subopt, &pkt);
 
 
+    /* PUBLISH config */
     pubopt.flags = MQTT_PUBLISH_FLAG_QOS_0;
     pubopt.topic = "test/topic";
     pubopt.data = msg;
     pubopt.size = strlen(msg);
+
     mqtt_publish(&conf, &pubopt, &pkt);
 
     while (1) {
-        ret = mqtt_net_recv(fd, recvbuf, MAX_PACKET_SIZE);
+        ret = mqtt_net_recv(fd, pktbuf, MAX_PACKET_SIZE);
         if (ret <= 0) {
             puts("error: mqtt_net_recv() <= 0");
             continue;
         }
 
-        /* TODO: glue together fragmented pkt */
-        if (ret == MAX_PACKET_SIZE) {
-            puts("overrun");
-            continue;
-        }
-
-        packet_decode(&pkt, (size_t)ret, recvbuf, MAX_PACKET_SIZE);
+        packet_decode(&pkt, (size_t)ret, pktbuf, MAX_PACKET_SIZE);
     }
 
     mqtt_net_close(fd);
