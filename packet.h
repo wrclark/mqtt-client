@@ -3,7 +3,6 @@
 
 #include <stdint.h>
 
-#include "mqtt.h"
 
 #define MQTT_CONNECT_FLAG_USERNAME 0x80
 #define MQTT_CONNECT_FLAG_PASSWORD 0x40
@@ -16,6 +15,7 @@
 #define MQTT_PUBLISH_FLAG_QOS (0x04 | 0x02)
 #define MQTT_PUBLISH_FLAG_QOS_2 0x04
 #define MQTT_PUBLISH_FLAG_QOS_1 0x02
+#define MQTT_PUBLISH_FLAG_QOS_0 0x00
 #define MQTT_PUBLISH_FLAG_RETAIN 0x01
 
 #define MQTT_PKT_CONNECT 0x10
@@ -133,9 +133,16 @@ typedef struct {
     uint16_t size;
 } mqtt_subscribe_opt_t;
 
+typedef struct {
+    char *topic;
+    void *data;
+    size_t size;
+    uint8_t flags;
+} mqtt_publish_opt_t;
+
 /************************************************/
 
-size_t packet_encode(mqtt_packet_t *pkt, uint8_t *buf);
+size_t packet_encode(mqtt_packet_t *pkt, uint8_t *buf, size_t size);
 void packet_connect(mqtt_packet_t *pkt, mqtt_connect_opt_t *opt, void *payload, size_t payload_size);
 void packet_subscribe(mqtt_packet_t *pkt, mqtt_subscribe_opt_t *opt);
 void packet_publish(mqtt_packet_t *pkt, const char *topic, uint8_t opts, void *payload, size_t payload_size);

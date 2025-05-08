@@ -11,6 +11,7 @@
 
 #include "config.h"
 #include "mqtt_net.h"
+#include "mqtt.h"
 
 int mqtt_net_connect(const char *addr, uint16_t port) {
     struct addrinfo hints, *res;

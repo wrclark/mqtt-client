@@ -6,6 +6,7 @@
 
 #include "packet.h"
 #include "util.h"
+#include "mqtt.h"
 
 size_t connect_payload(mqtt_connect_opt_t *con, uint8_t *buf, size_t bufsiz,
                     const char *client, const char *wt,

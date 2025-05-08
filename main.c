@@ -19,15 +19,23 @@ uint8_t recvbuf[MAX_PACKET_SIZE]; /* RX */
 uint8_t subs[SUB_SIZE];    /* sub topics + qos */
 uint8_t connect_pl[1024] = {0};
 
+void publish_callback(mqtt_packet_t *pkt);
+
 int main(void) {
 
+    mqtt_conf_t conf;
     mqtt_packet_t pkt;
     mqtt_connect_opt_t conopt;
     mqtt_subscribe_opt_t subopt;
+    mqtt_publish_opt_t pubopt;
     ssize_t ret;
     size_t size, plsiz;
     int fd;
-    uint8_t pubopt = 0;
+
+    conf.publish = publish_callback;
+    conf.suback = NULL;
+    conf.buf = sendbuf;
+    conf.size = MAX_PACKET_SIZE;
 
     memset(&pkt, 0, sizeof(pkt));
     memset(&conopt, 0, sizeof(conopt));
@@ -41,7 +49,7 @@ int main(void) {
         "test/topic", "farewell cruel world", NULL, NULL);
 
     packet_connect(&pkt, &conopt, connect_pl, plsiz);
-    size = packet_encode(&pkt, sendbuf);
+    size = packet_encode(&pkt, sendbuf, MAX_PACKET_SIZE);
 
     hexdump(sendbuf, pkt.real_size);
     printf("size: %lu, plsiz: %lu\n", size, plsiz);
@@ -51,6 +59,8 @@ int main(void) {
         fprintf(stderr, "unable to connect\n");
         exit(1);
     }
+
+    conf.fd = fd;
 
     puts("--> connect");
     ret = mqtt_net_send(fd, sendbuf, pkt.real_size);
@@ -81,7 +91,7 @@ int main(void) {
     
 
     packet_subscribe(&pkt, &subopt);
-    packet_encode(&pkt, sendbuf);
+    packet_encode(&pkt, sendbuf, MAX_PACKET_SIZE);
 
     puts("--> subscribe");
     ret = mqtt_net_send(fd, sendbuf, pkt.real_size);
@@ -101,18 +111,11 @@ int main(void) {
 
     packet_decode(&pkt, (size_t)ret, recvbuf, MAX_PACKET_SIZE);
 
-    pubopt |= MQTT_PUBLISH_FLAG_RETAIN;
-    pubopt |= MQTT_PUBLISH_FLAG_QOS_1;
-    packet_publish(&pkt, "test/topic", pubopt, msg, strlen(msg));
-    packet_encode(&pkt, sendbuf);
-
-    puts("--> publish");
-    ret = mqtt_net_send(fd, sendbuf, pkt.real_size);
-    if (ret <= 0) {
-        puts("error sending publish");
-        mqtt_net_close(fd);
-        exit(1);
-    }
+    pubopt.flags = MQTT_PUBLISH_FLAG_QOS_0;
+    pubopt.topic = "test/topic";
+    pubopt.data = msg;
+    pubopt.size = strlen(msg);
+    mqtt_publish(&conf, &pubopt, &pkt);
 
     while (1) {
         ret = mqtt_net_recv(fd, recvbuf, MAX_PACKET_SIZE);
@@ -135,3 +138,6 @@ int main(void) {
     return 0;
 }
 
+void publish_callback(mqtt_packet_t *pkt) {
+    printf("PUBLISH: %lu\n", pkt->real_size);
+}

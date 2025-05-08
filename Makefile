@@ -20,5 +20,4 @@ $(BIN): $(OBJECTS)
 	@$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
-	@echo ">> Cleaning"
 	@rm -f $(OBJECTS) $(BIN)

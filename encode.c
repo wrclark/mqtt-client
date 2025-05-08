@@ -3,6 +3,8 @@
 #include <string.h>
 
 #include "encode.h"
+#include "packet.h"
+#include "mqtt.h"
 
 static size_t encode_connect(mqtt_packet_t *pkt, uint8_t *buf) {
     int i;
@@ -42,10 +44,12 @@ static size_t encode_subscribe(mqtt_packet_t *pkt, uint8_t *buf) {
     return (size_t)(p - buf);
 }
 
-static size_t encode_publish(mqtt_packet_t *pkt, uint8_t *buf) {
+static size_t encode_publish(mqtt_packet_t *pkt, uint8_t *buf, size_t size) {
     uint8_t *p = buf;
     int i;
     uint16_t total;
+
+    (void) size;  /* TODO */
 
     *p++ = pkt->fix.type;
     for (i = 0; i < 4 && pkt->fix.remainder[i]; ++i)
@@ -66,7 +70,7 @@ static size_t encode_publish(mqtt_packet_t *pkt, uint8_t *buf) {
     return (size_t)(p - buf);
 }
 
-size_t encode(mqtt_packet_t *pkt, uint8_t *buf) {
+size_t encode(mqtt_packet_t *pkt, uint8_t *buf, size_t size) {
     uint8_t type = pkt->fix.type & 0xf0;
     printf("[enc] type=0x%02X\n", type);
     switch (type) {
@@ -77,7 +81,7 @@ size_t encode(mqtt_packet_t *pkt, uint8_t *buf) {
             return encode_subscribe(pkt, buf);
             break;
         case MQTT_PKT_PUBLISH:
-            return encode_publish(pkt, buf);
+            return encode_publish(pkt, buf, size);
             break;
 
         default:

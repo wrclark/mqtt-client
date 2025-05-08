@@ -5,6 +5,8 @@
 #include <stdio.h>
 
 #include "mqtt.h"
+#include "packet.h"
+#include "mqtt_net.h"
 
 uint32_t mqtt_varint_decode(const uint8_t *data, uint8_t *used) {
     int mult = 1;
@@ -63,4 +65,24 @@ uint16_t mqtt_string_decode(const uint8_t *buf, uint8_t *dest, size_t max) {
 
     memcpy(dest, buf+2, size);
     return size;
+}
+
+int mqtt_publish(mqtt_conf_t *conf, mqtt_publish_opt_t *opt, mqtt_packet_t *pkt) {
+    ssize_t ret;
+
+    packet_publish(pkt, opt->topic, opt->flags, opt->data, opt->size);
+    packet_encode(pkt, conf->buf, conf->size);
+
+    ret = mqtt_net_send(conf->fd, conf->buf, pkt->real_size);
+    if (ret <= 0) {
+        puts("error sending publish");
+        mqtt_net_close(conf->fd);
+        return 1;
+    }
+
+    if ((opt->flags & MQTT_PUBLISH_FLAG_QOS) != 0) {
+        printf("TODO: QoS not 0!\n");
+    }
+
+    return 0;
 }

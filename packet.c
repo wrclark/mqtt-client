@@ -66,8 +66,8 @@ void packet_publish(mqtt_packet_t *pkt, const char *topic, uint8_t opts, void *p
 
 
 
-size_t packet_encode(mqtt_packet_t *pkt, uint8_t *buf) {
-    return encode(pkt, buf);
+size_t packet_encode(mqtt_packet_t *pkt, uint8_t *buf, size_t size) {
+    return encode(pkt, buf, size);
 }
 
 void packet_decode(mqtt_packet_t *pkt, size_t pktsiz, uint8_t *buf, size_t bufsiz) {
