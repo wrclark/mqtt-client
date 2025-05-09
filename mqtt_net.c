@@ -2,6 +2,7 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <netinet/in.h>
+#include <pthread.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -12,6 +13,8 @@
 #include "config.h"
 #include "mqtt_net.h"
 #include "mqtt.h"
+
+pthread_mutex_t mutex1 = PTHREAD_MUTEX_INITIALIZER;
 
 int mqtt_net_connect(const char *addr, uint16_t port) {
     struct addrinfo hints, *res;
@@ -56,14 +59,20 @@ ssize_t mqtt_net_send(int fd, void *pkt, size_t size) {
     ssize_t sent;
     const char *buf = pkt;
 
+    pthread_mutex_lock(&mutex1);
+
     while ((size_t)total < size) {
         sent = send(fd, buf + total, size - (size_t)total, 0);
         if (sent < 0) {
+            pthread_mutex_unlock(&mutex1);
             perror("mqtt_net_send: send()");
             return -1;
         }
         total += sent;
     }
+
+    pthread_mutex_unlock(&mutex1);
+
     return total;
 }
 
@@ -74,13 +83,17 @@ ssize_t mqtt_net_recv(int fd, uint8_t *buf, size_t bufsiz) {
     ssize_t r;
     uint8_t used = 0;
 
+    pthread_mutex_lock(&mutex1);
+
     /* read fixed header, 2-5 bytes */
     while (total < 5) {
         r = recv(fd, buf + total, 5 - total, 0);
         if (r < 0) {
+            pthread_mutex_unlock(&mutex1);
             perror("mqtt_net_recv: recv() [1]");
             return -1;
         } else if (r == 0) {
+            pthread_mutex_unlock(&mutex1);
             return 0; /* closed */
         }
         total += (size_t)r;
@@ -102,6 +115,7 @@ ssize_t mqtt_net_recv(int fd, uint8_t *buf, size_t bufsiz) {
     packet_len = 1 + used + remaining_len;
     if (packet_len > bufsiz) {
         fprintf(stderr, "packet too large (%lu)\n", packet_len);
+        pthread_mutex_unlock(&mutex1);
         return -1;
     }
 
@@ -109,13 +123,17 @@ ssize_t mqtt_net_recv(int fd, uint8_t *buf, size_t bufsiz) {
     while (total < packet_len) {
         r = recv(fd, buf + total, packet_len - total, 0);
         if (r < 0) {
+            pthread_mutex_unlock(&mutex1);
             perror("mqtt_net_recv: recv() [2]");
             return -1;
         } else if (r == 0) {
+            pthread_mutex_unlock(&mutex1);
             return 0; /* closed */
         }
         total += (size_t)r;
     }
+
+    pthread_mutex_unlock(&mutex1);
 
     return (ssize_t)total;
 }

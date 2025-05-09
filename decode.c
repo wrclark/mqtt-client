@@ -44,6 +44,9 @@ static void decode_publish(const uint8_t *buf, size_t bufsiz, mqtt_packet_t *pkt
     const uint8_t *p = buf;
 
     (void) bufsiz;
+    memset(strings, 0, 1024);
+
+    pkt->real_size = 0; 
 
     flags = *p;
     printf("flags=%d ", flags & 0x0F);
@@ -106,7 +109,7 @@ static void decode_publish(const uint8_t *buf, size_t bufsiz, mqtt_packet_t *pkt
 static void decode_suback(const uint8_t *buf, size_t bufsiz, mqtt_packet_t *pkt, size_t pktsiz) {
     const uint8_t *p = buf;
     uint8_t flags = *p++ & 0x0f;
-    uint8_t used;
+    uint8_t used=0;
     uint32_t rem;
     uint8_t ret;
     uint32_t i;

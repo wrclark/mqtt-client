@@ -27,6 +27,7 @@ struct pinger_opts {
 
 void publish_callback(mqtt_packet_t *pkt);
 void *pinger(void *conf);
+void *publisher(void *conf);
 
 int main(void) {
 
@@ -38,6 +39,7 @@ int main(void) {
     ssize_t ret;
     int fd;
     pthread_t pingthread;
+    pthread_t pubthread;
     struct pinger_opts popts;
 
     memset(&conf, 0, sizeof(conf));
@@ -47,7 +49,7 @@ int main(void) {
     memset(&pubopt, 0, sizeof(pubopt));
 
     /* general config */
-    conf.broker = "broker.hivemq.com";
+    conf.broker = "test.mosquitto.org";
     conf.port = 1883;
     conf.buf = pktbuf;
     conf.size = MAX_PACKET_SIZE;
@@ -64,13 +66,20 @@ int main(void) {
     subopt.capacity = SUB_SIZE;
 
     /* create socket */
-    mqtt_init(&conf);
+    if (mqtt_init(&conf) != 0) {
+        fprintf(stderr, "mqtt_init()\n");
+        exit(1);
+    }
+
     fd = conf.fd; /* temp */
 
     /* generate payload for CONNECT pkt */
     util_connect_payload(&conopt, "xXxmqttuser1337xXx", "test/topic",
                         "farewell cruel world", NULL, NULL);
-    mqtt_connect(&conf, &conopt, &pkt);
+    if (mqtt_connect(&conf, &conopt, &pkt) != 0) {
+        fprintf(stderr, "mqtt_connect()\n");
+        exit(1);
+    }
 
 
     /* generate payload for SUBSCRIBE pkt */
@@ -78,8 +87,12 @@ int main(void) {
                           "test", 0,
                           "test/topic", 0,
                           "test/topic123", 0,
+                          "#", 0, /* gets all msgs on broker */
                           NULL);
-    mqtt_subscribe(&conf, &subopt, &pkt);
+    if (mqtt_subscribe(&conf, &subopt, &pkt) != 0) {
+        fprintf(stderr, "mqtt_subscribe()\n");
+        exit(1);
+    }
 
 
     /* PUBLISH config */
@@ -88,11 +101,15 @@ int main(void) {
     pubopt.data = msg;
     pubopt.size = strlen(msg);
 
-    mqtt_publish(&conf, &pubopt, &pkt);
+    if (mqtt_publish(&conf, &pubopt, &pkt) != 0) {
+        fprintf(stderr, "mqtt_publish()\n");
+        exit(1);
+    }
 
     popts.conf = &conf;
     popts.keepalive = conopt.keepalive;
     pthread_create(&pingthread, NULL, pinger, (void *)&popts);
+    pthread_create(&pubthread, NULL, publisher, (void *)&conf);
 
     while (1) {
         ret = mqtt_net_recv(fd, pktbuf, MAX_PACKET_SIZE);
@@ -102,9 +119,12 @@ int main(void) {
         }
 
         packet_decode(&pkt, (size_t)ret, pktbuf, MAX_PACKET_SIZE);
+        memset(pktbuf, 0, pkt.real_size);
+        memset(&pkt, 0, sizeof(pkt));
     }
 
     pthread_join(pingthread, NULL);
+    pthread_join(pubthread, NULL);
     mqtt_net_close(fd);
 
     return 0;
@@ -121,6 +141,25 @@ void *pinger(void *conf) {
         ret = mqtt_ping(((struct pinger_opts *)conf)->conf);
         if (ret > 0) break;
         sleep(((struct pinger_opts *)conf)->keepalive);
+    }
+    
+    return NULL;
+}
+
+void *publisher(void *conf) {
+    int ret;
+    mqtt_packet_t pkt = {0};
+    mqtt_publish_opt_t opt = {0};
+    opt.data = "hello from publisher thread";
+    opt.size = strlen(opt.data);
+    opt.topic = "test/topic";
+    opt.flags = 0;
+    while(1) {
+        puts("--> PUBLISH -->");
+        ret = mqtt_publish((mqtt_conf_t *)conf, &opt, &pkt);
+        if (ret > 0) break;
+        sleep(10);
+        printf("SENT\n\n\n\n\n");
     }
     
     return NULL;
