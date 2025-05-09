@@ -151,6 +151,9 @@ int decode(mqtt_packet_t *pkt, size_t pktsiz, const uint8_t *buf, size_t bufsiz)
             printf("SUBACK\n");
             decode_suback(buf, bufsiz, pkt, pktsiz);
             break;
+        case MQTT_PKT_PINGRESP:
+            printf("PINGRESP\n");
+            break;
         
         default:
             printf("NOT HANDLED\n");

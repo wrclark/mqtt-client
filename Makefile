@@ -13,7 +13,7 @@ all: $(BIN)
 
 $(BIN): $(OBJECTS)
 	@echo "LD\t$(BIN)"
-	@$(CC) $(CFLAGS) $(OBJECTS) -o $(BIN)
+	@$(CC) $(CFLAGS) $(OBJECTS) -o $(BIN) -lpthread
 
 %.o: %.c
 	@echo "CC\t$<"

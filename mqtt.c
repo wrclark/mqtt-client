@@ -79,6 +79,23 @@ int mqtt_init(mqtt_conf_t *conf) {
     return 0;
 }
 
+int mqtt_ping(mqtt_conf_t *conf) {
+    ssize_t ret;
+    uint8_t buf[2];
+
+    buf[0] = MQTT_PKT_PINGREQ;
+    buf[1] = 0;
+
+    ret = mqtt_net_send(conf->fd, buf, 2);
+    if (ret <= 0) {
+        puts("error sending pingreq");
+        mqtt_net_close(conf->fd);
+        return 1;
+    }
+
+    return 0;
+}
+
 int mqtt_publish(mqtt_conf_t *conf, mqtt_publish_opt_t *opt, mqtt_packet_t *pkt) {
     ssize_t ret;
 

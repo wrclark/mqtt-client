@@ -1,7 +1,9 @@
+#include <pthread.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "config.h"
 #include "mqtt.h"
@@ -18,7 +20,13 @@ uint8_t pktbuf[MAX_PACKET_SIZE];
 uint8_t subs[SUB_SIZE];    /* sub topics + qos */
 uint8_t connect_pl[1024]; /* connect payload */
 
+struct pinger_opts {
+    mqtt_conf_t *conf;
+    uint16_t keepalive;
+};
+
 void publish_callback(mqtt_packet_t *pkt);
+void *pinger(void *conf);
 
 int main(void) {
 
@@ -29,6 +37,8 @@ int main(void) {
     mqtt_publish_opt_t pubopt;
     ssize_t ret;
     int fd;
+    pthread_t pingthread;
+    struct pinger_opts popts;
 
     memset(&conf, 0, sizeof(conf));
     memset(&pkt, 0, sizeof(pkt));
@@ -80,16 +90,21 @@ int main(void) {
 
     mqtt_publish(&conf, &pubopt, &pkt);
 
+    popts.conf = &conf;
+    popts.keepalive = conopt.keepalive;
+    pthread_create(&pingthread, NULL, pinger, (void *)&popts);
+
     while (1) {
         ret = mqtt_net_recv(fd, pktbuf, MAX_PACKET_SIZE);
         if (ret <= 0) {
             puts("error: mqtt_net_recv() <= 0");
-            continue;
+            break;
         }
 
         packet_decode(&pkt, (size_t)ret, pktbuf, MAX_PACKET_SIZE);
     }
 
+    pthread_join(pingthread, NULL);
     mqtt_net_close(fd);
 
     return 0;
@@ -97,4 +112,16 @@ int main(void) {
 
 void publish_callback(mqtt_packet_t *pkt) {
     printf("PUBLISH: %lu\n", pkt->real_size);
+}
+
+void *pinger(void *conf) {
+    int ret;
+    while(1) {
+        puts("--> PING -->");
+        ret = mqtt_ping(((struct pinger_opts *)conf)->conf);
+        if (ret > 0) break;
+        sleep(((struct pinger_opts *)conf)->keepalive);
+    }
+    
+    return NULL;
 }
