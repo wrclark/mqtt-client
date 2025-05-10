@@ -1,5 +1,5 @@
 CC      := gcc
-CFLAGS := -std=c89 -O3 -Wall -Wextra -Werror -pedantic \
+CFLAGS  := -std=c89 -O3 -Wall -Wextra -Werror -pedantic \
           -Wconversion -Wsign-conversion -Wcast-align -Wfloat-equal \
           -Wshadow -Wcast-qual -Wstrict-prototypes \
           -Wmissing-prototypes -Wmissing-declarations \
