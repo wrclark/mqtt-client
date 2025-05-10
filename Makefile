@@ -1,12 +1,14 @@
 CC      := gcc
 CFLAGS := -std=c89 -O3 -Wall -Wextra -Werror -pedantic \
-          -Wconversion -Wshadow -Wcast-qual -Wstrict-prototypes \
+          -Wconversion -Wsign-conversion -Wcast-align -Wfloat-equal \
+          -Wshadow -Wcast-qual -Wstrict-prototypes \
           -Wmissing-prototypes -Wmissing-declarations \
           -fstrict-aliasing -fomit-frame-pointer -fno-common \
-          -march=native -flto -fstack-protector-strong \
-          -D_FORTIFY_SOURCE=2
-LDFLAGS := -flto -Wl,-O1 -Wl,--as-needed -Wl,-z,relro -Wl,-z,now
-
+          -fstack-protector-strong -D_FORTIFY_SOURCE=2 \
+          -fPIC -march=native -flto \
+          -Wformat=2 -Wformat-security -Wnull-dereference
+LDFLAGS := -flto -Wl,-O1 -Wl,--as-needed \
+           -Wl,-z,relro -Wl,-z,now -Wl,-z,noexecstack
 
 CFILES  := $(wildcard *.c)
 OBJECTS := $(CFILES:.c=.o)
