@@ -1,5 +1,7 @@
 #define _GNU_SOURCE
 #include <arpa/inet.h>
+#include <errno.h>
+#include <fcntl.h>
 #include <netdb.h>
 #include <netinet/in.h>
 #include <pthread.h>
@@ -17,7 +19,7 @@
 
 int mqtt_net_connect(const char *addr, uint16_t port) {
     struct addrinfo hints, *res;
-    int sockfd;
+    int sockfd, flags;
     char port_str[6];
 
     snprintf(port_str, sizeof(port_str), "%u", port);
@@ -46,6 +48,11 @@ int mqtt_net_connect(const char *addr, uint16_t port) {
     }
 
     freeaddrinfo(res);
+
+    /* set non-blocking */
+    flags = fcntl(sockfd, F_GETFL, 0);
+    fcntl(sockfd, F_SETFL, flags | O_NONBLOCK);
+
     return sockfd;
 }
 
@@ -70,6 +77,7 @@ ssize_t mqtt_net_send(int fd, void *pkt, size_t size) {
     return total;
 }
 
+
 ssize_t mqtt_net_recv(int fd, uint8_t *buf, size_t bufsiz) {
     uint32_t remaining_len;
     size_t total = 0;
@@ -81,41 +89,39 @@ ssize_t mqtt_net_recv(int fd, uint8_t *buf, size_t bufsiz) {
     while (total < 5) {
         r = recv(fd, buf + total, 5 - total, 0);
         if (r < 0) {
+            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                return 0; 
+            }
             perror("mqtt_net_recv: recv() [1]");
             return -1;
         } else if (r == 0) {
-            return 0; /* closed */
+            return 0; 
         }
         total += (size_t)r;
 
-        /* parse remainder and wait for it */
         remaining_len = mqtt_varint_decode(buf + 1, &used);
-
-        /*if (remaining_len > MAX_PACKET_SIZE) {
-            fprintf(stderr, "server sent pkt too large\n");
-            mqtt_net_close(fd);
-            return -1;
-        } */
-
         if (used > 0 && (1 + used + remaining_len) <= bufsiz) {
-            break; /* OK */
+            break; 
         }
     }
 
     packet_len = 1 + used + remaining_len;
     if (packet_len > bufsiz) {
-        fprintf(stderr, "packet too large (%lu)\n", packet_len);
+        fprintf(stderr, "packet too large (%lu)\n", (unsigned long)packet_len);
         return -1;
     }
 
-    /* read remainder */
+    /* read the rest of the packet */
     while (total < packet_len) {
         r = recv(fd, buf + total, packet_len - total, 0);
         if (r < 0) {
+            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                return 0; 
+            }
             perror("mqtt_net_recv: recv() [2]");
             return -1;
         } else if (r == 0) {
-            return 0; /* closed */
+            return 0; 
         }
         total += (size_t)r;
     }

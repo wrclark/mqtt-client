@@ -11,6 +11,15 @@ void queue_init(queue_t *q) {
     pthread_cond_init(&q->not_full, NULL);
 }
 
+/* if queue is empty return 1 */
+int queue_empty(queue_t *q) {
+    int ret;
+    pthread_mutex_lock(&q->lock);
+    ret = q->count == 0;
+    pthread_mutex_unlock(&q->lock);
+    return ret;
+}
+
 void queue_push(queue_t *q, void *item) {
     pthread_mutex_lock(&q->lock);
 

@@ -102,18 +102,32 @@ void *net_recv_loop(void *arg) {
     ssize_t ret;
     mqtt_conf_t *conf = arg;
     mqtt_packet_t pkt;
+    pkt_xfer *xfer;
     /* create socket */
     if (mqtt_init(conf) != 0) {
         fprintf(stderr, "mqtt_init()\n");
         return NULL;
     }
 
+    printf("tx_queue size=%d\n", tx_queue.count);
     while (1) {
         ret = mqtt_net_recv(conf->fd, pktbuf, MAX_PACKET_SIZE);
-        if (ret <= 0) {
+        if (ret < 0) {
             puts("error: mqtt_net_recv() <= 0");
             break;
         }
+
+        /* nothing to read, check TX queue for pkts to send out */
+        else if (ret == 0) {
+            if (!queue_empty(&tx_queue)) {
+                xfer = (pkt_xfer *)queue_pop(&tx_queue);
+                mqtt_net_send(conf->fd, xfer->pkt, xfer->size);
+                free(xfer->pkt);
+                free(xfer);
+                printf("pkt sent!");
+            }
+            continue;
+        } 
 
         packet_decode(&pkt, (size_t)ret, pktbuf, MAX_PACKET_SIZE);
     }
