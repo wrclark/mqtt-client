@@ -8,7 +8,7 @@
 #include "config.h"
 
 typedef struct {
-    uint8_t buf[MAX_PACKET_SIZE];
+    uint8_t *buf;        /* malloc'd to MAX_PACKET_SIZE */
     size_t total;        /* how many bytes read so far */
     size_t packet_len;   /* expected total packet length */
     uint8_t varint_used; /* bytes used in varint */

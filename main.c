@@ -18,7 +18,7 @@
 
 char *msg = "hello mqtt!!!";
 
-uint8_t pktbuf[MAX_PACKET_SIZE];
+uint8_t pktbuf[MAX_PACKET_SIZE]; /* for generating pkts */
 uint8_t subs[SUB_SIZE];    /* sub topics + qos */
 uint8_t connect_pl[1024]; /* connect payload */
 
@@ -26,6 +26,10 @@ queue_t tx_queue; /* outgoing pkts */
 queue_t rx_queue; /* incoming pkts */
 
 void *net_recv_loop(void *arg);
+void *pinger(void *arg);
+
+static volatile int should_run = 1;
+static uint16_t keepalive = 60;
 
 int main(void) {
     mqtt_conf_t conf = {0};
@@ -34,6 +38,7 @@ int main(void) {
     mqtt_subscribe_opt_t subopt = {0};
     mqtt_publish_opt_t pubopt = {0};
     pthread_t net_thread; /* does all network IO */
+    pthread_t ping_thread; /* sends hello occasionally */
 
     queue_init(&tx_queue);
     queue_init(&rx_queue);
@@ -46,7 +51,7 @@ int main(void) {
 
     /* CONNECT config */
     conopt.flags = MQTT_CONNECT_FLAG_CLEAN | MQTT_CONNECT_FLAG_WILL;
-    conopt.keepalive = 60;
+    conopt.keepalive = keepalive;
     conopt.payload = connect_pl;
     conopt.size = 1024;
 
@@ -69,7 +74,9 @@ int main(void) {
                           "test", 0,
                           "test/topic", 0,
                           "test/topic123", 0,
-                          "#", 0, /* gets all msgs on broker */
+                          /* can't read fast enough, overflows buffer and breaks pkt ! */
+                          /* need fast cpu and/or huge buffer */
+                           "#", 0, /* gets all msgs on broker */
                           NULL);
     if (mqtt_subscribe(&conf, &subopt, &pkt, &tx_queue) != 0) {
         fprintf(stderr, "mqtt_subscribe()\n");
@@ -89,12 +96,25 @@ int main(void) {
     }
 
     pthread_create(&net_thread, NULL, net_recv_loop, (void *)&conf);
+    pthread_create(&ping_thread, NULL, pinger, (void *)&conf);
 
 
     pthread_join(net_thread, NULL);
     mqtt_net_close(conf.fd);
 
     return 0;
+}
+
+void *pinger(void *arg) {
+    mqtt_conf_t *conf = arg;
+
+    while(should_run) {
+        sleep(keepalive);
+        mqtt_ping(conf, &tx_queue);
+        puts("PING");
+    }
+
+    return NULL;
 }
 
 /* receives pkts from broker and puts them inside the rx queue */
@@ -104,7 +124,15 @@ void *net_recv_loop(void *arg) {
     mqtt_packet_t pkt;
     pkt_xfer *xfer;
     mqtt_recv_state_t rxstate;
+    int err = 0;
     memset(&rxstate, 0, sizeof(rxstate));
+
+    rxstate.buf = malloc(MAX_PACKET_SIZE);
+    if (!rxstate.buf) {
+        fprintf(stderr, "unable to malloc pkt buf (size=%lu)\n", MAX_PACKET_SIZE);
+        should_run = 0;
+        return NULL;
+    }
 
     if (mqtt_init(conf) != 0) {
         fprintf(stderr, "mqtt_init()\n");
@@ -112,11 +140,18 @@ void *net_recv_loop(void *arg) {
     }
 
     printf("tx_queue size=%d\n", tx_queue.count);
-    while (1) {
+    while (should_run) {
         ssize_t ret = mqtt_net_recv_pkt_stateful(conf->fd, &rxstate);
         if (ret < 0) {
             puts("error: mqtt_net_recv_pkt_stateful() < 0");
-            break;
+            if (err++ > 10) {
+                memset(&rxstate, 0, sizeof(rxstate));
+                continue;
+            } else {
+                puts("network down?");
+                should_run = 0;
+                return NULL;
+            }
         } else if (ret == 0) {
             /* no full packet, check TX queue */
             if (!queue_empty(&tx_queue)) {
@@ -126,12 +161,11 @@ void *net_recv_loop(void *arg) {
                 free(xfer);
                 printf("pkt sent!\n");
             }
-            usleep(5000); /* slight pause to avoid tight loop */
+            usleep(3000); /* slight pause to avoid tight loop */
             continue;
         }
+        err = 0;
 
-        printf("PACKET:\n");
-        asciidump(rxstate.buf, (size_t)ret);
         /* full packet received */
         packet_decode(&pkt, (size_t)ret, rxstate.buf, MAX_PACKET_SIZE);
     }
