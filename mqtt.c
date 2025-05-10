@@ -79,87 +79,65 @@ int mqtt_init(mqtt_conf_t *conf) {
     return 0;
 }
 
-int mqtt_ping(mqtt_conf_t *conf) {
-    ssize_t ret;
+int mqtt_ping(mqtt_conf_t *conf, queue_t *q) {
     uint8_t buf[2];
+    pkt_xfer *xfer;
+
+    (void) conf;
 
     buf[0] = MQTT_PKT_PINGREQ;
     buf[1] = 0;
 
-    ret = mqtt_net_send(conf->fd, buf, 2);
-    if (ret <= 0) {
-        puts("error sending pingreq");
-        mqtt_net_close(conf->fd);
-        return 1;
-    }
+    xfer = malloc(sizeof(pkt_xfer));
+    xfer->pkt = malloc(2);
+    xfer->size = 2;
+    memcpy(xfer->pkt, buf, 2);
+    queue_push(q, (void *)xfer);
 
     return 0;
 }
 
-int mqtt_publish(mqtt_conf_t *conf, mqtt_publish_opt_t *opt, mqtt_packet_t *pkt) {
-    ssize_t ret;
+int mqtt_publish(mqtt_conf_t *conf, mqtt_publish_opt_t *opt, mqtt_packet_t *pkt, queue_t *q) {
+    pkt_xfer *xfer;
 
     packet_publish(pkt, opt->topic, opt->flags, opt->data, opt->size);
     packet_encode(pkt, conf->buf, conf->size);
 
-    ret = mqtt_net_send(conf->fd, conf->buf, pkt->real_size);
-    if (ret <= 0) {
-        puts("error sending publish");
-        mqtt_net_close(conf->fd);
-        return 1;
-    }
-
-    if ((opt->flags & MQTT_PUBLISH_FLAG_QOS) != 0) {
-        printf("TODO: QoS not 0!\n");
-    }
+    xfer = malloc(sizeof(pkt_xfer));
+    xfer->pkt = malloc(pkt->real_size);
+    xfer->size = pkt->real_size;
+    memcpy(xfer->pkt, conf->buf, pkt->real_size);
+    queue_push(q, (void *)xfer);
 
     return 0;
 }
 
-int mqtt_subscribe(mqtt_conf_t *conf, mqtt_subscribe_opt_t *opt, mqtt_packet_t *pkt) {
-    ssize_t ret;
+int mqtt_subscribe(mqtt_conf_t *conf, mqtt_subscribe_opt_t *opt, mqtt_packet_t *pkt, queue_t *q) {
+    pkt_xfer *xfer;
     packet_subscribe(pkt, opt);
     packet_encode(pkt, conf->buf, conf->size);
 
-    ret = mqtt_net_send(conf->fd, conf->buf, pkt->real_size);
-    if (ret <= 0) {
-        puts("error sending subscribe");
-        mqtt_net_close(conf->fd);
-        return 1;
-    }
+    xfer = malloc(sizeof(pkt_xfer));
+    xfer->pkt = malloc(pkt->real_size);
+    xfer->size = pkt->real_size;
+    memcpy(xfer->pkt, conf->buf, pkt->real_size);
+    queue_push(q, (void *)xfer);
 
-    /* wait for suback ... */
-    ret = mqtt_net_recv(conf->fd, conf->buf, conf->size);
-    if (ret <= 0) {
-        fprintf(stderr, "error receiving data (size=%ld)\n", ret);
-        mqtt_net_close(conf->fd);
-        return 1;
-    }
-
-    packet_decode(pkt, (size_t)ret, conf->buf, conf->size);
+    packet_decode(pkt, pkt->real_size, conf->buf, conf->size);
     return 0;
 }
 
-int mqtt_connect(mqtt_conf_t *conf, mqtt_connect_opt_t *opt, mqtt_packet_t *pkt) {
-    ssize_t ret;
+int mqtt_connect(mqtt_conf_t *conf, mqtt_connect_opt_t *opt, mqtt_packet_t *pkt, queue_t *q) {
+    pkt_xfer *xfer;
     packet_connect(pkt, opt);
     packet_encode(pkt, conf->buf, conf->size);
 
-    ret = mqtt_net_send(conf->fd, conf->buf, pkt->real_size);
-    if (ret <= 0) {
-        fprintf(stderr, "error sending data\n");
-        mqtt_net_close(conf->fd);
-        return 1;
-    }
+    xfer = malloc(sizeof(pkt_xfer));
+    xfer->pkt = malloc(pkt->real_size);
+    xfer->size = pkt->real_size;
+    memcpy(xfer->pkt, conf->buf, pkt->real_size);
+    queue_push(q, (void *)xfer);
 
-    /* wait for connack */
-    ret = mqtt_net_recv(conf->fd, conf->buf, conf->size);
-    if (ret <= 0) {
-        fprintf(stderr, "error receiving data (size=%ld)\n", ret);
-        mqtt_net_close(conf->fd);
-        return 1;
-    }
-
-    packet_decode(pkt, (size_t)ret, conf->buf, conf->size);
+    packet_decode(pkt, pkt->real_size, conf->buf, conf->size);
     return 0;
 }

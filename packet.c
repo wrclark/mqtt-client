@@ -74,13 +74,3 @@ size_t packet_encode(mqtt_packet_t *pkt, uint8_t *buf, size_t size) {
 void packet_decode(mqtt_packet_t *pkt, size_t pktsiz, uint8_t *buf, size_t bufsiz) {
     decode(pkt, pktsiz, buf, bufsiz);
 }
-
-/* TODO: fix */
-mqtt_packet_t *mqtt_packet_new(uint8_t type) {
-    (void) type;
-    return malloc(sizeof(mqtt_packet_t));
-}
-
-void mqtt_packet_free(mqtt_packet_t *pkt) {
-    if (pkt) free(pkt);
-}

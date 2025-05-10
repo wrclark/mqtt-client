@@ -10,6 +10,7 @@
 #include "mqtt_net.h"
 #include "packet.h"
 #include "util.h"
+#include "queue.h"
 
 #define SUB_SIZE 512
 #define NICK_SIZE 128
@@ -20,42 +21,27 @@ uint8_t pktbuf[MAX_PACKET_SIZE];
 uint8_t subs[SUB_SIZE];    /* sub topics + qos */
 uint8_t connect_pl[1024]; /* connect payload */
 
-struct pinger_opts {
-    mqtt_conf_t *conf;
-    uint16_t keepalive;
-};
+queue_t tx_queue; /* outgoing pkts */
+queue_t rx_queue; /* incoming pkts */
 
-pthread_mutex_t mutex1 = PTHREAD_MUTEX_INITIALIZER;
-
-void publish_callback(mqtt_packet_t *pkt);
-void *pinger(void *conf);
-void *publisher(void *conf);
+void *net_recv_loop(void *arg);
 
 int main(void) {
+    mqtt_conf_t conf = {0};
+    mqtt_packet_t pkt = {0};
+    mqtt_connect_opt_t conopt = {0};
+    mqtt_subscribe_opt_t subopt = {0};
+    mqtt_publish_opt_t pubopt = {0};
+    pthread_t net_thread; /* does all network IO */
 
-    mqtt_conf_t conf;
-    mqtt_packet_t pkt;
-    mqtt_connect_opt_t conopt;
-    mqtt_subscribe_opt_t subopt;
-    mqtt_publish_opt_t pubopt;
-    ssize_t ret;
-    int fd;
-    pthread_t pingthread;
-    pthread_t pubthread;
-    struct pinger_opts popts;
-
-    memset(&conf, 0, sizeof(conf));
-    memset(&pkt, 0, sizeof(pkt));
-    memset(&conopt, 0, sizeof(conopt));
-    memset(&subopt, 0, sizeof(subopt));
-    memset(&pubopt, 0, sizeof(pubopt));
+    queue_init(&tx_queue);
+    queue_init(&rx_queue);
 
     /* general config */
     conf.broker = "test.mosquitto.org";
     conf.port = 1883;
     conf.buf = pktbuf;
     conf.size = MAX_PACKET_SIZE;
-    conf.publish = publish_callback;
 
     /* CONNECT config */
     conopt.flags = MQTT_CONNECT_FLAG_CLEAN | MQTT_CONNECT_FLAG_WILL;
@@ -67,18 +53,11 @@ int main(void) {
     subopt.buf = subs;
     subopt.capacity = SUB_SIZE;
 
-    /* create socket */
-    if (mqtt_init(&conf) != 0) {
-        fprintf(stderr, "mqtt_init()\n");
-        exit(1);
-    }
-
-    fd = conf.fd; /* temp */
 
     /* generate payload for CONNECT pkt */
     util_connect_payload(&conopt, "xXxmqttuser1337xXx", "test/topic",
                         "farewell cruel world", NULL, NULL);
-    if (mqtt_connect(&conf, &conopt, &pkt) != 0) {
+    if (mqtt_connect(&conf, &conopt, &pkt, &tx_queue) != 0) {
         fprintf(stderr, "mqtt_connect()\n");
         exit(1);
     }
@@ -91,7 +70,7 @@ int main(void) {
                           "test/topic123", 0,
                           "#", 0, /* gets all msgs on broker */
                           NULL);
-    if (mqtt_subscribe(&conf, &subopt, &pkt) != 0) {
+    if (mqtt_subscribe(&conf, &subopt, &pkt, &tx_queue) != 0) {
         fprintf(stderr, "mqtt_subscribe()\n");
         exit(1);
     }
@@ -103,73 +82,41 @@ int main(void) {
     pubopt.data = msg;
     pubopt.size = strlen(msg);
 
-    if (mqtt_publish(&conf, &pubopt, &pkt) != 0) {
+    if (mqtt_publish(&conf, &pubopt, &pkt, &tx_queue) != 0) {
         fprintf(stderr, "mqtt_publish()\n");
         exit(1);
     }
 
-    popts.conf = &conf;
-    popts.keepalive = conopt.keepalive;
-    pthread_create(&pingthread, NULL, pinger, (void *)&popts);
-    pthread_create(&pubthread, NULL, publisher, (void *)&conf);
+    pthread_create(&net_thread, NULL, net_recv_loop, (void *)&conf);
+
+
+    pthread_join(net_thread, NULL);
+    mqtt_net_close(conf.fd);
+
+    return 0;
+}
+
+/* receives pkts from broker and puts them inside the rx queue */
+/* if any pkts are in the tx queue, it will transmit them */
+void *net_recv_loop(void *arg) {
+    ssize_t ret;
+    mqtt_conf_t *conf = arg;
+    mqtt_packet_t pkt;
+    /* create socket */
+    if (mqtt_init(conf) != 0) {
+        fprintf(stderr, "mqtt_init()\n");
+        return NULL;
+    }
 
     while (1) {
-        pthread_mutex_lock(&mutex1);
-        ret = mqtt_net_recv(fd, pktbuf, MAX_PACKET_SIZE);
+        ret = mqtt_net_recv(conf->fd, pktbuf, MAX_PACKET_SIZE);
         if (ret <= 0) {
-            pthread_mutex_unlock(&mutex1);
             puts("error: mqtt_net_recv() <= 0");
             break;
         }
 
         packet_decode(&pkt, (size_t)ret, pktbuf, MAX_PACKET_SIZE);
-        pthread_mutex_unlock(&mutex1);
-        memset(pktbuf, 0, pkt.real_size);
-        memset(&pkt, 0, sizeof(pkt));
     }
 
-    pthread_join(pingthread, NULL);
-    pthread_join(pubthread, NULL);
-    mqtt_net_close(fd);
-
-    return 0;
-}
-
-void publish_callback(mqtt_packet_t *pkt) {
-    printf("PUBLISH: %lu\n", pkt->real_size);
-}
-
-void *pinger(void *conf) {
-    int ret;
-    struct pinger_opts *opts = conf;
-    while(1) {
-        sleep(opts->keepalive);
-        puts("--> PING -->");
-        pthread_mutex_lock(&mutex1);
-        ret = mqtt_ping(opts->conf);
-        pthread_mutex_unlock(&mutex1);
-        if (ret > 0) break;
-    }
-    
-    return NULL;
-}
-
-void *publisher(void *conf) {
-    int ret;
-    mqtt_packet_t pkt = {0};
-    mqtt_publish_opt_t opt = {0};
-    opt.data = "hello from publisher thread";
-    opt.size = strlen(opt.data);
-    opt.topic = "test/topic";
-    opt.flags = 0;
-    while(1) {
-        sleep(10);
-        puts("--> PUBLISH -->");
-        pthread_mutex_lock(&mutex1);
-        ret = mqtt_publish((mqtt_conf_t *)conf, &opt, &pkt);
-        pthread_mutex_unlock(&mutex1);
-        if (ret > 0) break;
-    }
-    
     return NULL;
 }

@@ -4,13 +4,14 @@
 #include <stdint.h>
 
 #include "packet.h"
-
-/* callback function */
-typedef void (*mqtt_cb_t)(mqtt_packet_t *);
+#include "queue.h"
 
 typedef struct {
-    mqtt_cb_t publish;
-    mqtt_cb_t suback;
+    void *pkt;
+    size_t size;
+} pkt_xfer;
+
+typedef struct {
     void *buf;
     size_t size;
     int fd;
@@ -27,9 +28,9 @@ uint16_t mqtt_string_encode(uint8_t *buf, const char *msg, size_t max);
 uint16_t mqtt_string_decode(const uint8_t *buf, uint8_t *dest, size_t max);
 
 int mqtt_init(mqtt_conf_t *conf);
-int mqtt_ping(mqtt_conf_t *conf);
-int mqtt_connect(mqtt_conf_t *conf, mqtt_connect_opt_t *opt, mqtt_packet_t *pkt);
-int mqtt_publish(mqtt_conf_t *conf, mqtt_publish_opt_t *opt, mqtt_packet_t *pkt);
-int mqtt_subscribe(mqtt_conf_t *conf, mqtt_subscribe_opt_t *opt, mqtt_packet_t *pkt);
+int mqtt_ping(mqtt_conf_t *conf, queue_t *q);
+int mqtt_connect(mqtt_conf_t *conf, mqtt_connect_opt_t *opt, mqtt_packet_t *pkt, queue_t *q);
+int mqtt_publish(mqtt_conf_t *conf, mqtt_publish_opt_t *opt, mqtt_packet_t *pkt, queue_t *q);
+int mqtt_subscribe(mqtt_conf_t *conf, mqtt_subscribe_opt_t *opt, mqtt_packet_t *pkt, queue_t *q);
 
 #endif
