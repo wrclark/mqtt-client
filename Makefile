@@ -17,13 +17,12 @@ BIN     := mqtt
 all: $(BIN)
 
 $(BIN): $(OBJECTS)
-	@echo "LD\t$(BIN)"
-	@$(CC) $(CFLAGS) $(LDFLAGS) $(OBJECTS) -o $(BIN) -lpthread
-
+	@echo "LD   $(BIN)"
+	$(CC) $(CFLAGS) $(LDFLAGS) $(OBJECTS) -o $(BIN) -lpthread
 
 %.o: %.c
-	@echo "CC\t$<"
-	@$(CC) $(CFLAGS) -c $< -o $@
+	@echo "CC   $<"
+	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
 	@rm -f $(OBJECTS) $(BIN)
