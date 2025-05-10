@@ -1,3 +1,4 @@
+#define _GNU_SOURCE /* for usleep() */
 #include <pthread.h>
 #include <stdio.h>
 #include <stdint.h>
@@ -99,11 +100,12 @@ int main(void) {
 /* receives pkts from broker and puts them inside the rx queue */
 /* if any pkts are in the tx queue, it will transmit them */
 void *net_recv_loop(void *arg) {
-    ssize_t ret;
     mqtt_conf_t *conf = arg;
     mqtt_packet_t pkt;
     pkt_xfer *xfer;
-    /* create socket */
+    mqtt_recv_state_t rxstate;
+    memset(&rxstate, 0, sizeof(rxstate));
+
     if (mqtt_init(conf) != 0) {
         fprintf(stderr, "mqtt_init()\n");
         return NULL;
@@ -111,25 +113,27 @@ void *net_recv_loop(void *arg) {
 
     printf("tx_queue size=%d\n", tx_queue.count);
     while (1) {
-        ret = mqtt_net_recv_pkt(conf->fd, pktbuf, MAX_PACKET_SIZE);
+        ssize_t ret = mqtt_net_recv_pkt_stateful(conf->fd, &rxstate);
         if (ret < 0) {
-            puts("error: mqtt_net_recv() <= 0");
+            puts("error: mqtt_net_recv_pkt_stateful() < 0");
             break;
-        }
-
-        /* nothing to read, check TX queue for pkts to send out */
-        else if (ret == 0) {
+        } else if (ret == 0) {
+            /* no full packet, check TX queue */
             if (!queue_empty(&tx_queue)) {
                 xfer = (pkt_xfer *)queue_pop(&tx_queue);
                 mqtt_net_send(conf->fd, xfer->pkt, xfer->size);
                 free(xfer->pkt);
                 free(xfer);
-                printf("pkt sent!");
+                printf("pkt sent!\n");
             }
+            usleep(5000); /* slight pause to avoid tight loop */
             continue;
-        } 
+        }
 
-        packet_decode(&pkt, (size_t)ret, pktbuf, MAX_PACKET_SIZE);
+        printf("PACKET:\n");
+        asciidump(rxstate.buf, (size_t)ret);
+        /* full packet received */
+        packet_decode(&pkt, (size_t)ret, rxstate.buf, MAX_PACKET_SIZE);
     }
 
     return NULL;

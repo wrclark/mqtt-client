@@ -77,54 +77,62 @@ ssize_t mqtt_net_send(int fd, void *pkt, size_t size) {
     return total;
 }
 
-
-ssize_t mqtt_net_recv_pkt(int fd, uint8_t *buf, size_t bufsiz) {
-    uint32_t remaining_len;
-    size_t total = 0;
-    size_t packet_len;
+ssize_t mqtt_net_recv_pkt_stateful(int fd, mqtt_recv_state_t *st) {
     ssize_t r;
-    uint8_t used = 0;
+    size_t need;
+    ssize_t ret;
 
-    /* read fixed header, 2-5 bytes */
-    while (total < 5) {
-        r = recv(fd, buf + total, 5 - total, 0);
+    if (!st->have_length) {
+        /* Read up to 5 bytes to get full fixed header (1 + max 4 for varint) */
+        need = 5 - st->total;
+        r = recv(fd, st->buf + st->total, need, 0);
         if (r < 0) {
-            if (errno == EAGAIN || errno == EWOULDBLOCK) {
-                return 0; 
-            }
-            perror("mqtt_net_recv: recv() [1]");
+            if (errno == EAGAIN || errno == EWOULDBLOCK) return 0;
+            perror("recv [fixed hdr]");
             return -1;
         } else if (r == 0) {
-            return 0; 
+            return -1; /* connection closed */
         }
-        total += (size_t)r;
+        st->total += (size_t)r;
 
-        remaining_len = mqtt_varint_decode(buf + 1, &used);
-        if (used > 0 && (1 + used + remaining_len) <= bufsiz) {
-            break; 
-        }
-    }
-
-    packet_len = 1 + used + remaining_len;
-    if (packet_len > bufsiz) {
-        fprintf(stderr, "packet too large (%lu)\n", (unsigned long)packet_len);
-        return -1;
-    }
-
-    /* read the rest of the packet */
-    while (total < packet_len) {
-        r = recv(fd, buf + total, packet_len - total, 0);
-        if (r < 0) {
-            if (errno == EAGAIN || errno == EWOULDBLOCK) {
-                return 0; 
+        if (st->total >= 2) {
+            uint32_t remaining_len = mqtt_varint_decode(st->buf + 1, &st->varint_used);
+            if (st->varint_used == 0 || (size_t)(1 + st->varint_used) > st->total) {
+                return 0; /* still waiting for full varint */
             }
-            perror("mqtt_net_recv: recv() [2]");
+
+            st->packet_len = 1 + st->varint_used + remaining_len;
+            st->have_length = 1;
+
+            if (st->packet_len > MAX_PACKET_SIZE) {
+                fprintf(stderr, "packet too big (%lu)\n", (unsigned long)st->packet_len);
+                return -1;
+            }
+        }
+        return 0;
+    }
+
+    /* Continue reading until full packet is received */
+    if (st->total < st->packet_len) {
+        r = recv(fd, st->buf + st->total, st->packet_len - st->total, 0);
+        if (r < 0) {
+            if (errno == EAGAIN || errno == EWOULDBLOCK) return 0;
+            perror("recv [body]");
             return -1;
         } else if (r == 0) {
-            return 0; 
+            return -1;
         }
-        total += (size_t)r;
+        st->total += (size_t)r;
     }
 
-    return (ssize_t)total;
+    if (st->total == st->packet_len) {
+        ret = (ssize_t)st->total;
+        st->total = 0;
+        st->packet_len = 0;
+        st->have_length = 0;
+        st->varint_used = 0;
+        return ret; /* full packet ready */
+    }
+
+    return 0; /* still waiting */
 }
