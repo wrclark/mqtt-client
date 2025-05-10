@@ -24,7 +24,7 @@ $(BIN): $(OBJECTS)
 
 %.o: %.c
 	@echo "CC   $<"
-	$(CC) $(CFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) -c $< 
 
 clean:
 	@rm -f $(OBJECTS) $(BIN)
