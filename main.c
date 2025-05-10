@@ -25,6 +25,8 @@ struct pinger_opts {
     uint16_t keepalive;
 };
 
+pthread_mutex_t mutex1 = PTHREAD_MUTEX_INITIALIZER;
+
 void publish_callback(mqtt_packet_t *pkt);
 void *pinger(void *conf);
 void *publisher(void *conf);
@@ -112,13 +114,16 @@ int main(void) {
     pthread_create(&pubthread, NULL, publisher, (void *)&conf);
 
     while (1) {
+        pthread_mutex_lock(&mutex1);
         ret = mqtt_net_recv(fd, pktbuf, MAX_PACKET_SIZE);
         if (ret <= 0) {
+            pthread_mutex_unlock(&mutex1);
             puts("error: mqtt_net_recv() <= 0");
             break;
         }
 
         packet_decode(&pkt, (size_t)ret, pktbuf, MAX_PACKET_SIZE);
+        pthread_mutex_unlock(&mutex1);
         memset(pktbuf, 0, pkt.real_size);
         memset(&pkt, 0, sizeof(pkt));
     }
@@ -136,11 +141,14 @@ void publish_callback(mqtt_packet_t *pkt) {
 
 void *pinger(void *conf) {
     int ret;
+    struct pinger_opts *opts = conf;
     while(1) {
+        sleep(opts->keepalive);
         puts("--> PING -->");
-        ret = mqtt_ping(((struct pinger_opts *)conf)->conf);
+        pthread_mutex_lock(&mutex1);
+        ret = mqtt_ping(opts->conf);
+        pthread_mutex_unlock(&mutex1);
         if (ret > 0) break;
-        sleep(((struct pinger_opts *)conf)->keepalive);
     }
     
     return NULL;
@@ -155,11 +163,12 @@ void *publisher(void *conf) {
     opt.topic = "test/topic";
     opt.flags = 0;
     while(1) {
-        puts("--> PUBLISH -->");
-        ret = mqtt_publish((mqtt_conf_t *)conf, &opt, &pkt);
-        if (ret > 0) break;
         sleep(10);
-        printf("SENT\n\n\n\n\n");
+        puts("--> PUBLISH -->");
+        pthread_mutex_lock(&mutex1);
+        ret = mqtt_publish((mqtt_conf_t *)conf, &opt, &pkt);
+        pthread_mutex_unlock(&mutex1);
+        if (ret > 0) break;
     }
     
     return NULL;
