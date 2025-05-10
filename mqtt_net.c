@@ -78,7 +78,7 @@ ssize_t mqtt_net_send(int fd, void *pkt, size_t size) {
 }
 
 
-ssize_t mqtt_net_recv(int fd, uint8_t *buf, size_t bufsiz) {
+ssize_t mqtt_net_recv_pkt(int fd, uint8_t *buf, size_t bufsiz) {
     uint32_t remaining_len;
     size_t total = 0;
     size_t packet_len;

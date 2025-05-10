@@ -111,7 +111,7 @@ void *net_recv_loop(void *arg) {
 
     printf("tx_queue size=%d\n", tx_queue.count);
     while (1) {
-        ret = mqtt_net_recv(conf->fd, pktbuf, MAX_PACKET_SIZE);
+        ret = mqtt_net_recv_pkt(conf->fd, pktbuf, MAX_PACKET_SIZE);
         if (ret < 0) {
             puts("error: mqtt_net_recv() <= 0");
             break;
