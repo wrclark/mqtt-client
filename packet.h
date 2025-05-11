@@ -116,7 +116,7 @@ typedef union {
 typedef struct {
     fix_header_t fix;
     var_header_t var;
-    void *payload;
+    const void *payload;
     size_t payload_size;
     size_t real_size;
 } mqtt_packet_t;
@@ -138,8 +138,8 @@ typedef struct {
 } mqtt_subscribe_opt_t;
 
 typedef struct {
-    char *topic;
-    void *data;
+    const char *topic;
+    const void *data;
     size_t size;
     uint8_t flags;
 } mqtt_publish_opt_t;
@@ -149,7 +149,7 @@ typedef struct {
 size_t packet_encode(mqtt_packet_t *pkt, uint8_t *buf, size_t size);
 void packet_connect(mqtt_packet_t *pkt, mqtt_connect_opt_t *opt);
 void packet_subscribe(mqtt_packet_t *pkt, mqtt_subscribe_opt_t *opt);
-void packet_publish(mqtt_packet_t *pkt, const char *topic, uint8_t opts, void *payload, size_t payload_size);
+void packet_publish(mqtt_packet_t *pkt, const char *topic, const uint8_t opts, const void *payload, const size_t payload_size);
 void packet_decode(mqtt_packet_t *pkt, size_t pktsiz, uint8_t *buf, size_t bufsiz);
 
 

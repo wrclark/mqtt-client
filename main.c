@@ -16,7 +16,7 @@
 #define SUB_SIZE 512
 #define NICK_SIZE 128
 
-char *msg = "hello mqtt!!!";
+const char *msg = "hello mqtt!!!";
 
 uint8_t pktbuf[MAX_PACKET_SIZE]; /* for generating pkts */
 uint8_t subs[SUB_SIZE];    /* sub topics + qos */

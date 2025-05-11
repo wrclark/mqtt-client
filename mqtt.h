@@ -15,7 +15,7 @@ typedef struct {
     void *buf;
     size_t size;
     int fd;
-    char *broker;
+    const char *broker;
     uint16_t port;
 } mqtt_conf_t;
 

@@ -41,7 +41,7 @@ void packet_subscribe(mqtt_packet_t *pkt, mqtt_subscribe_opt_t *opt) {
     pkt->real_size = (size_t)(1 + varint_len + total);
 }
 
-void packet_publish(mqtt_packet_t *pkt, const char *topic, uint8_t opts, void *payload, size_t payload_size) {
+void packet_publish(mqtt_packet_t *pkt, const char *topic, const uint8_t opts, const void *payload, const size_t payload_size) {
     size_t total = 0;
     uint8_t varint_len;
 

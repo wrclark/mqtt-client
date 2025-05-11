@@ -1,11 +1,13 @@
 CC      := gcc
 CFLAGS  := -std=c89 -O3 -Wall -Wextra -Werror -pedantic \
-          -Wconversion -Wsign-conversion -Wcast-align -Wfloat-equal \
+          -Wconversion -Wsign-conversion -Wcast-align \
           -Wshadow -Wcast-qual -Wstrict-prototypes \
           -Wmissing-prototypes -Wmissing-declarations \
           -fstrict-aliasing -fomit-frame-pointer -fno-common \
           -fstack-protector-strong -D_FORTIFY_SOURCE=2 \
-          -fPIC -march=native -flto \
+          -Wundef -Wwrite-strings -Wpointer-arith \
+          -Wbad-function-cast -Wjump-misses-init -Winit-self \
+          -Wlogical-op -fPIC -march=native -flto \
           -Wformat=2 -Wformat-security -Wnull-dereference
 LDFLAGS := -flto -Wl,-O1 -Wl,--as-needed \
            -Wl,-z,relro -Wl,-z,now -Wl,-z,noexecstack

@@ -87,7 +87,7 @@ ssize_t mqtt_net_recv_pkt_stateful(int fd, mqtt_recv_state_t *st) {
         need = 5 - st->total;
         r = recv(fd, st->buf + st->total, need, 0);
         if (r < 0) {
-            if (errno == EAGAIN || errno == EWOULDBLOCK) return 0;
+            if (errno == EAGAIN) return 0;
             perror("recv [fixed hdr]");
             return -1;
         } else if (r == 0) {
@@ -116,7 +116,7 @@ ssize_t mqtt_net_recv_pkt_stateful(int fd, mqtt_recv_state_t *st) {
     if (st->total < st->packet_len) {
         r = recv(fd, st->buf + st->total, st->packet_len - st->total, 0);
         if (r < 0) {
-            if (errno == EAGAIN || errno == EWOULDBLOCK) return 0;
+            if (errno == EAGAIN) return 0;
             perror("recv [body]");
             return -1;
         } else if (r == 0) {
