@@ -115,6 +115,8 @@ int main(void) {
     }
 
     pthread_join(net_thread, NULL);
+    /*pthread_join(ping_thread, NULL);*/
+    /* takes up to keepalive sec to return TODO: fix */
     mqtt_net_close(conf.fd);
     puts("Bye");
     return 0;
