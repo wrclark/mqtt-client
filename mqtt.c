@@ -123,7 +123,6 @@ int mqtt_subscribe(mqtt_conf_t *conf, mqtt_subscribe_opt_t *opt, mqtt_packet_t *
     memcpy(xfer->pkt, conf->buf, pkt->real_size);
     queue_push(q, (void *)xfer);
 
-    packet_decode(pkt, pkt->real_size, conf->buf, conf->size);
     return 0;
 }
 
@@ -138,6 +137,5 @@ int mqtt_connect(mqtt_conf_t *conf, mqtt_connect_opt_t *opt, mqtt_packet_t *pkt,
     memcpy(xfer->pkt, conf->buf, pkt->real_size);
     queue_push(q, (void *)xfer);
 
-    packet_decode(pkt, pkt->real_size, conf->buf, conf->size);
     return 0;
 }

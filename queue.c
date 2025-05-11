@@ -20,6 +20,15 @@ int queue_empty(queue_t *q) {
     return ret;
 }
 
+/* if queue is full return 1 */
+int queue_full(queue_t *q) {
+    int ret;
+    pthread_mutex_lock(&q->lock);
+    ret = q->count == QUEUE_SIZE;
+    pthread_mutex_unlock(&q->lock);
+    return ret;
+}
+
 void queue_push(queue_t *q, void *item) {
     pthread_mutex_lock(&q->lock);
 

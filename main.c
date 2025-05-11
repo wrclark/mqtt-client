@@ -37,6 +37,7 @@ int main(void) {
     mqtt_connect_opt_t conopt = {0};
     mqtt_subscribe_opt_t subopt = {0};
     mqtt_publish_opt_t pubopt = {0};
+    pkt_xfer *xfer;
     pthread_t net_thread; /* does all network IO */
     pthread_t ping_thread; /* sends hello occasionally */
 
@@ -44,7 +45,7 @@ int main(void) {
     queue_init(&rx_queue);
 
     /* general config */
-    conf.broker = "test.mosquitto.org";
+    conf.broker = "broker.hivemq.com"; /* mosquitto boots for no reason */
     conf.port = 1883;
     conf.buf = pktbuf;
     conf.size = MAX_PACKET_SIZE;
@@ -74,9 +75,6 @@ int main(void) {
                           "test", 0,
                           "test/topic", 0,
                           "test/topic123", 0,
-                          /* can't read fast enough, overflows buffer and breaks pkt ! */
-                          /* need fast cpu and/or huge buffer */
-                           "#", 0, /* gets all msgs on broker */
                           NULL);
     if (mqtt_subscribe(&conf, &subopt, &pkt, &tx_queue) != 0) {
         fprintf(stderr, "mqtt_subscribe()\n");
@@ -98,6 +96,17 @@ int main(void) {
     pthread_create(&net_thread, NULL, net_recv_loop, (void *)&conf);
     pthread_create(&ping_thread, NULL, pinger, (void *)&conf);
 
+    usleep(100000); 
+
+    while (should_run) {
+        if (!queue_empty(&rx_queue)) {
+            xfer = (pkt_xfer *)queue_pop(&rx_queue);
+            packet_decode(&pkt, xfer->size, xfer->pkt, xfer->size);
+            free(xfer->pkt);
+            free(xfer);
+        }
+        usleep(20000);
+    }
 
     pthread_join(net_thread, NULL);
     mqtt_net_close(conf.fd);
@@ -105,6 +114,7 @@ int main(void) {
     return 0;
 }
 
+/* sends a ping to broker every so often */
 void *pinger(void *arg) {
     mqtt_conf_t *conf = arg;
 
@@ -120,11 +130,10 @@ void *pinger(void *arg) {
 /* receives pkts from broker and puts them inside the rx queue */
 /* if any pkts are in the tx queue, it will transmit them */
 void *net_recv_loop(void *arg) {
-    mqtt_conf_t *conf = arg;
-    mqtt_packet_t pkt;
-    pkt_xfer *xfer;
     mqtt_recv_state_t rxstate;
-    int err = 0;
+    mqtt_conf_t *conf = arg;
+    pkt_xfer *xfer;
+    ssize_t ret;
     memset(&rxstate, 0, sizeof(rxstate));
 
     rxstate.buf = malloc(MAX_PACKET_SIZE);
@@ -139,19 +148,13 @@ void *net_recv_loop(void *arg) {
         return NULL;
     }
 
-    printf("tx_queue size=%d\n", tx_queue.count);
     while (should_run) {
-        ssize_t ret = mqtt_net_recv_pkt_stateful(conf->fd, &rxstate);
+        ret = mqtt_net_recv_pkt_stateful(conf->fd, &rxstate);
         if (ret < 0) {
             puts("error: mqtt_net_recv_pkt_stateful() < 0");
-            if (err++ > 10) {
-                memset(&rxstate, 0, sizeof(rxstate));
-                continue;
-            } else {
-                puts("network down?");
-                should_run = 0;
-                return NULL;
-            }
+            should_run = 0;
+            return NULL;
+
         } else if (ret == 0) {
             /* no full packet, check TX queue */
             if (!queue_empty(&tx_queue)) {
@@ -161,13 +164,23 @@ void *net_recv_loop(void *arg) {
                 free(xfer);
                 printf("pkt sent!\n");
             }
-            usleep(3000); /* slight pause to avoid tight loop */
+            usleep(5000);
             continue;
         }
-        err = 0;
 
         /* full packet received */
-        packet_decode(&pkt, (size_t)ret, rxstate.buf, MAX_PACKET_SIZE);
+        if (!queue_full(&rx_queue)) {
+            xfer = malloc(sizeof(pkt_xfer));
+            xfer->pkt = malloc((size_t) ret);
+            xfer->size = (size_t) ret;
+            memcpy(xfer->pkt, rxstate.buf, (size_t) ret);
+            queue_push(&rx_queue, (void *)xfer);
+            printf("pushed message (%d/%d)\n", rx_queue.count, QUEUE_SIZE);
+        } else {
+            puts("QUEUE FULL !!!");
+        }
+
+        usleep(5000);
     }
 
     return NULL;
