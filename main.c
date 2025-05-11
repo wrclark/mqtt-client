@@ -1,5 +1,6 @@
 #define _GNU_SOURCE /* for usleep() */
 #include <pthread.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -27,6 +28,7 @@ queue_t rx_queue; /* incoming pkts */
 
 void *net_recv_loop(void *arg);
 void *pinger(void *arg);
+void sighandler(int sig);
 
 static volatile int should_run = 1;
 static uint16_t keepalive = 60;
@@ -43,6 +45,12 @@ int main(void) {
 
     queue_init(&tx_queue);
     queue_init(&rx_queue);
+
+    signal(SIGINT,  sighandler);
+    signal(SIGTERM, sighandler);
+    signal(SIGHUP,  sighandler);
+    signal(SIGQUIT, sighandler);
+    signal(SIGABRT, sighandler);
 
     /* general config */
     conf.broker = "broker.hivemq.com"; /* mosquitto boots for no reason */
@@ -96,8 +104,6 @@ int main(void) {
     pthread_create(&net_thread, NULL, net_recv_loop, (void *)&conf);
     pthread_create(&ping_thread, NULL, pinger, (void *)&conf);
 
-    usleep(100000); 
-
     while (should_run) {
         if (!queue_empty(&rx_queue)) {
             xfer = (pkt_xfer *)queue_pop(&rx_queue);
@@ -110,7 +116,7 @@ int main(void) {
 
     pthread_join(net_thread, NULL);
     mqtt_net_close(conf.fd);
-
+    puts("Bye");
     return 0;
 }
 
@@ -183,5 +189,18 @@ void *net_recv_loop(void *arg) {
         usleep(5000);
     }
 
+    /* send DISCONNECT packet */
+    rxstate.buf[0] = MQTT_PKT_DISCONNECT;
+    rxstate.buf[1] = 0;
+    mqtt_net_send(conf->fd, rxstate.buf, 2);
+
+
+    free(rxstate.buf);
     return NULL;
+}
+
+void sighandler(int sig) {
+    (void) sig;
+    should_run = 0;
+    puts("Exiting..");
 }
