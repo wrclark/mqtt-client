@@ -8,6 +8,23 @@
 #include "packet.h"
 #include "mqtt_net.h"
 
+/*  QoS state tracking
+    packet_id is uint16_t
+    it can have several different states
+        Qos 1:
+           -- publish
+           -- puback
+        Qos 2:
+           -- publish
+           -- pubrec
+           -- pubrel
+           -- pubcomp
+
+
+           all possible packet id's 
+      static uint8_t qos_states[65536];
+*/
+
 uint32_t mqtt_varint_decode(const uint8_t *data, uint8_t *used) {
     int mult = 1;
     uint32_t value = 0;
