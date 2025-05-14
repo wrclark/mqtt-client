@@ -8,6 +8,12 @@
 #include "packet.h"
 #include "mqtt_net.h"
 
+#define PKT_STATE_UNUSED  0x00
+#define PKT_STATE_PUBLISH 0x01
+#define PKT_STATE_PUBACK  0x02
+#define PKT_STATE_PUBREC  0x03
+#define PKT_STATE_PUBREL  0x04
+#define PKT_STATE_PUBCOMP 0x05
 /*  QoS state tracking
     packet_id is uint16_t
     it can have several different states
@@ -22,8 +28,26 @@
 
 
            all possible packet id's 
-      static uint8_t qos_states[65536];
 */
+
+static uint8_t qos_states[65536];
+
+void update_qos_state(uint16_t id, uint8_t type) {
+    uint8_t new_state = 0;
+    switch(type) {
+        case MQTT_PKT_PUBLISH: new_state = PKT_STATE_PUBLISH; break;
+        case MQTT_PKT_PUBACK:  new_state = PKT_STATE_PUBACK;  break;
+        case MQTT_PKT_PUBREC:  new_state = PKT_STATE_PUBREC;  break;
+        case MQTT_PKT_PUBREL:  new_state = PKT_STATE_PUBREL;  break;
+        case MQTT_PKT_PUBCOMP: new_state = PKT_STATE_PUBCOMP; break;
+    }
+    printf("update_qos>>old=%d\n", qos_states[id]);
+    qos_states[id] = new_state;
+    printf("update_qos>>new=%d\n", qos_states[id]);
+    if (qos_states[id] == PKT_STATE_PUBREC) {
+        printf("got pubrec, should send pubrel for id=%d\n", id);
+    }
+}
 
 uint32_t mqtt_varint_decode(const uint8_t *data, uint8_t *used) {
     int mult = 1;

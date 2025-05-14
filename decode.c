@@ -134,6 +134,21 @@ static void decode_suback(const uint8_t *buf, size_t bufsiz, mqtt_packet_t *pkt,
     pkt->real_size = (size_t)(p - buf);
 }
 
+static void decode_pubresp(const uint8_t *buf, size_t bufsiz) {
+    const uint8_t *p = buf;
+    uint8_t flags = *p++;
+    uint8_t used=0;
+    uint16_t pktid;
+    uint32_t rem;
+    (void) bufsiz;
+
+    printf("flags=%d\n", flags);
+    rem = mqtt_varint_decode(buf, &used);
+    p += used;
+    printf("rem=%d\n", rem);
+    pktid = (*p << 8) | *(p + 1);
+    update_qos_state(pktid, flags & 0xf0);
+}
 
 int decode(mqtt_packet_t *pkt, size_t pktsiz, const uint8_t *buf, size_t bufsiz) {
     uint8_t type = *buf & 0xf0;
@@ -156,6 +171,12 @@ int decode(mqtt_packet_t *pkt, size_t pktsiz, const uint8_t *buf, size_t bufsiz)
             break;
         case MQTT_PKT_PINGRESP:
             printf("PINGRESP\n");
+            break;
+        case MQTT_PKT_PUBACK:
+        case MQTT_PKT_PUBREC:
+        case MQTT_PKT_PUBREL:
+        case MQTT_PKT_PUBCOMP:
+            decode_pubresp(buf, bufsiz);
             break;
         
         default:

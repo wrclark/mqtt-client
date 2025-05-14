@@ -27,6 +27,8 @@ int      mqtt_varint_encode(uint8_t *dst, uint32_t n);
 uint16_t mqtt_string_encode(uint8_t *buf, const char *msg, size_t max);
 uint16_t mqtt_string_decode(const uint8_t *buf, uint8_t *dest, size_t max);
 
+void update_qos_state(uint16_t id, uint8_t type);
+
 int mqtt_init(mqtt_conf_t *conf);
 int mqtt_ping(mqtt_conf_t *conf, queue_t *q);
 int mqtt_connect(mqtt_conf_t *conf, mqtt_connect_opt_t *opt, mqtt_packet_t *pkt, queue_t *q);
