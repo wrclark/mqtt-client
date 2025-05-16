@@ -7,6 +7,9 @@
 #include "mqtt.h"
 #include "packet.h"
 #include "mqtt_net.h"
+#include "queue.h"
+
+extern queue_t tx_queue;
 
 #define PKT_STATE_UNUSED  0x00
 #define PKT_STATE_PUBLISH 0x01
@@ -34,6 +37,8 @@ static uint8_t qos_states[65536];
 
 void update_qos_state(uint16_t id, uint8_t type) {
     uint8_t new_state = 0;
+    uint8_t buf[4];
+    pkt_xfer *xfer;
     switch(type) {
         case MQTT_PKT_PUBLISH: new_state = PKT_STATE_PUBLISH; break;
         case MQTT_PKT_PUBACK:  new_state = PKT_STATE_PUBACK;  break;
@@ -46,6 +51,19 @@ void update_qos_state(uint16_t id, uint8_t type) {
     printf("update_qos>>new=%d\n", qos_states[id]);
     if (qos_states[id] == PKT_STATE_PUBREC) {
         printf("got pubrec, should send pubrel for id=%d\n", id);
+        xfer = malloc(sizeof (pkt_xfer));
+        xfer->pkt = malloc(4);
+        xfer->size = 4;
+        buf[0] = 0x62; /* header + flags, todo fix */
+        buf[1] = 0x02; /* rem size */
+        buf[2] = (uint8_t)((htons(id) >> 8) & 0xff);
+        buf[3] = (uint8_t)((htons(id)) & 0xff);
+        memcpy(xfer->pkt, buf, 4);
+        queue_push(&tx_queue, xfer);
+    }
+    if (qos_states[id] == PKT_STATE_PUBCOMP) {
+        qos_states[id] = PKT_STATE_UNUSED;
+        printf("pubcomp for id=%d received\n", htons(id));
     }
 }
 

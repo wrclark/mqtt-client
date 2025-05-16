@@ -91,7 +91,7 @@ int main(void) {
 
 
     /* PUBLISH config */
-    pubopt.flags = MQTT_PUBLISH_FLAG_QOS_1;
+    pubopt.flags = MQTT_PUBLISH_FLAG_QOS_2;
     pubopt.topic = "test/topic";
     pubopt.data = msg;
     pubopt.size = strlen(msg);
