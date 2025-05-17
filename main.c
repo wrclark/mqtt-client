@@ -107,15 +107,24 @@ int main(void) {
     pthread_create(&net_thread, NULL, net_recv_loop, (void *)&conf);
     pthread_create(&ping_thread, NULL, pinger, (void *)&conf);
 
+
+    /* clear pkt */
+    memset(&pkt, 0,  sizeof(mqtt_packet_t));
+
     while (should_run) {
         if (!queue_empty(&rx_queue)) {
             printf("[rx] pop'd message (%d/%d)\n", rx_queue.count, QUEUE_SIZE);
             xfer = (pkt_xfer *)queue_pop(&rx_queue);
+
+            /* clear pkt */
+            memset(&pkt, 0,  sizeof(mqtt_packet_t));
+            
             packet_decode(&pkt, xfer->size, xfer->pkt, xfer->size);
             if ((pkt.fix.type & 0xf0) == MQTT_PKT_PUBLISH) {
                 printf("%2.2X\n", (pkt.fix.type & 0xf0));
                 if (pkt.payload) {
-                    printf("payload (size=%lu): %s\n", pkt.payload_size, (const char *)pkt.payload);
+                    printf("topic: %s\n", pkt.var.publish.topic);
+                    printf("payload (size=%lu): %.*s\n", pkt.payload_size, (int)pkt.payload_size, (const char *)pkt.payload);
                     free(pkt.payload);
                 }
             }
@@ -182,6 +191,7 @@ void *net_recv_loop(void *arg) {
                 mqtt_net_send(conf->fd, xfer->pkt, xfer->size);
                 free(xfer->pkt);
                 free(xfer);
+                continue;
             }
             usleep(5000);
             continue;
