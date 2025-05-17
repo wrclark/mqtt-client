@@ -28,6 +28,7 @@ queue_t rx_queue; /* incoming pkts */
 
 void *net_recv_loop(void *arg);
 void *pinger(void *arg);
+void *hello(void *arg);
 void sighandler(int sig);
 
 static volatile int should_run = 1;
@@ -43,7 +44,8 @@ int main(void) {
 
     pkt_xfer *xfer;
     pthread_t net_thread; /* does all network IO */
-    pthread_t ping_thread; /* sends hello occasionally */
+    pthread_t ping_thread; /* sends pings occasionally */
+    pthread_t hello_thread; /* sends hello occasionally */
 
     queue_init(&tx_queue);
     queue_init(&rx_queue);
@@ -96,7 +98,7 @@ int main(void) {
     /* PUBLISH config */
     pubopt.flags = MQTT_PUBLISH_FLAG_QOS_2;
     strcpy((char *)&pubopt.topic, "test/topic");
-    pubopt.data = strdup(msg);
+    pubopt.data = msg;
     pubopt.size = strlen(msg);
 
     if (mqtt_publish(&conf, &pubopt, &pkt, &tx_queue) != 0) {
@@ -106,6 +108,7 @@ int main(void) {
 
     pthread_create(&net_thread, NULL, net_recv_loop, (void *)&conf);
     pthread_create(&ping_thread, NULL, pinger, (void *)&conf);
+    pthread_create(&hello_thread, NULL, hello, (void *)&conf);
 
 
     /* clear pkt */
@@ -139,6 +142,29 @@ int main(void) {
     mqtt_net_close(conf.fd);
     puts("Bye");
     return 0;
+}
+
+/* sends a hello to broker every so often */
+void *hello(void *arg) {
+    uint8_t hello_msg[64] = {0};
+
+    (void) arg;
+    memcpy(hello_msg, "hello from my thread", strlen("hello from my thread"));
+    
+    pubopt.flags = MQTT_PUBLISH_FLAG_QOS_1;
+    strcpy((char *)&pubopt.topic, "test/topic123");
+    pubopt.data = hello_msg;
+    pubopt.size = strlen((char *)hello_msg);
+
+    while(should_run) {
+        sleep(10);
+        if (mqtt_publish(&conf, &pubopt, &pkt, &tx_queue) != 0) {
+            fprintf(stderr, "mqtt_publish()\n");
+            exit(1);
+        }
+    }
+
+    return NULL;
 }
 
 /* sends a ping to broker every so often */

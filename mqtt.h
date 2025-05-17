@@ -28,6 +28,7 @@ int      mqtt_varint_encode(uint8_t *dst, uint32_t n);
 uint16_t mqtt_string_encode(uint8_t *buf, const uint8_t *msg, size_t max);
 uint16_t mqtt_string_decode(const uint8_t *buf, uint8_t *dest, size_t max);
 
+uint16_t new_packet_id(void);
 void update_qos_state(uint16_t id, uint8_t type);
 const char *mqtt_pkt_str(uint8_t pkt_type);
 int mqtt_init(mqtt_conf_t *conf);

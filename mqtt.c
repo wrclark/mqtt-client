@@ -33,7 +33,17 @@ extern queue_t tx_queue;
            all possible packet id's 
 */
 
+/* incremented and allowed to roll over */
+static uint16_t packet_id;
 static uint8_t qos_states[65536];
+
+uint16_t new_packet_id(void) {
+    if (packet_id < 1) {
+        packet_id = 1;
+    }
+    
+    return packet_id++;
+}
 
 void update_qos_state(uint16_t id, uint8_t type) {
     uint8_t new_state = 0;
