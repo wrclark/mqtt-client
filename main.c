@@ -53,7 +53,7 @@ int main(void) {
     signal(SIGABRT, sighandler);
 
     /* general config */
-    conf.broker = "broker.hivemq.com"; /* mosquitto boots for no reason */
+    conf.broker = "test.mosquitto.org"; /* mosquitto boots for no reason */
     conf.port = 1883;
     conf.buf = pktbuf;
     conf.size = MAX_PACKET_SIZE;
@@ -83,6 +83,7 @@ int main(void) {
                           "test", 0,
                           "test/topic", 0,
                           "test/topic123", 0,
+                          
                           NULL);
     if (mqtt_subscribe(&conf, &subopt, &pkt, &tx_queue) != 0) {
         fprintf(stderr, "mqtt_subscribe()\n");
@@ -106,6 +107,7 @@ int main(void) {
 
     while (should_run) {
         if (!queue_empty(&rx_queue)) {
+            printf("[rx] pop'd message (%d/%d)\n", rx_queue.count, QUEUE_SIZE);
             xfer = (pkt_xfer *)queue_pop(&rx_queue);
             packet_decode(&pkt, xfer->size, xfer->pkt, xfer->size);
             free(xfer->pkt);
@@ -166,11 +168,11 @@ void *net_recv_loop(void *arg) {
         } else if (ret == 0) {
             /* no full packet, check TX queue */
             if (!queue_empty(&tx_queue)) {
+                printf("[tx] pop'd message (%d/%d)\n", rx_queue.count, QUEUE_SIZE);
                 xfer = (pkt_xfer *)queue_pop(&tx_queue);
                 mqtt_net_send(conf->fd, xfer->pkt, xfer->size);
                 free(xfer->pkt);
                 free(xfer);
-                printf("pkt sent!\n");
             }
             usleep(5000);
             continue;
@@ -183,7 +185,7 @@ void *net_recv_loop(void *arg) {
             xfer->size = (size_t) ret;
             memcpy(xfer->pkt, rxstate.buf, (size_t) ret);
             queue_push(&rx_queue, (void *)xfer);
-            printf("pushed message (%d/%d)\n", rx_queue.count, QUEUE_SIZE);
+            printf("[rx] pushed message (%d/%d)\n", rx_queue.count, QUEUE_SIZE);
         } else {
             puts("QUEUE FULL !!!");
         }
