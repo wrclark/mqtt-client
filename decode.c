@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "decode.h"
+#include "mqtt.h"
 
 static void decode_connect(const uint8_t *buf, size_t bufsiz, mqtt_packet_t *pkt) {
     uint8_t used=0;
@@ -155,25 +156,20 @@ static void decode_pubresp(const uint8_t *buf, size_t bufsiz) {
 
 int decode(mqtt_packet_t *pkt, const uint8_t *buf, size_t bufsiz) {
     uint8_t type = *buf & 0xf0;
-    printf("[dec] type=0x%02X\n", *buf);
+    printf("[dec] type=0x%02X (%s)\n", *buf, mqtt_pkt_str(*buf));
     switch (type & 0xf0) {
         case MQTT_PKT_CONNECT:
-            printf("CONNECT\n");
             decode_connect(buf, bufsiz, pkt);
             break;
         case MQTT_PKT_CONNACK:
-            printf("CONNACK\n");
             break;
         case MQTT_PKT_PUBLISH:
-            printf("PUBLISH\n");
             decode_publish(buf, bufsiz, pkt);
             break;
         case MQTT_PKT_SUBACK:
-            printf("SUBACK\n");
             decode_suback(buf, bufsiz, pkt);
             break;
         case MQTT_PKT_PINGRESP:
-            printf("PINGRESP\n");
             break;
         case MQTT_PKT_PUBACK:
         case MQTT_PKT_PUBREC:

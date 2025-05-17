@@ -199,3 +199,25 @@ int mqtt_connect(mqtt_conf_t *conf, mqtt_connect_opt_t *opt, mqtt_packet_t *pkt,
 
     return 0;
 }
+
+
+const char *mqtt_pkt_str(uint8_t pkt_type) {
+    switch (pkt_type & 0xf0) {
+        case MQTT_PKT_CONNECT:     return "CONNECT";
+        case MQTT_PKT_CONNACK:     return "CONNACK";
+        case MQTT_PKT_PUBLISH:     return "PUBLISH";
+        case MQTT_PKT_PUBACK:      return "PUBACK";
+        case MQTT_PKT_PUBREC:      return "PUBREC";
+        case MQTT_PKT_PUBREL:      return "PUBREL";
+        case MQTT_PKT_PUBCOMP:     return "PUBCOMP";
+        case MQTT_PKT_SUBSCRIBE:   return "SUBSCRIBE";
+        case MQTT_PKT_SUBACK:      return "SUBACK";
+        case MQTT_PKT_UNSUBSCRIBE: return "UNSUBSCRIBE";
+        case MQTT_PKT_UNSUBACK:    return "UNSUBACK";
+        case MQTT_PKT_PINGREQ:     return "PINGREQ";
+        case MQTT_PKT_PINGRESP:    return "PINGRESP";
+        case MQTT_PKT_DISCONNECT:  return "DISCONNECT";
+    }
+
+    return "UNKNOWN";
+}

@@ -72,7 +72,7 @@ static size_t encode_publish(mqtt_packet_t *pkt, uint8_t *buf, size_t size) {
 
 size_t encode(mqtt_packet_t *pkt, uint8_t *buf, size_t size) {
     uint8_t type = pkt->fix.type & 0xf0;
-    printf("[enc] type=0x%02X\n", type);
+    printf("[enc] type=0x%02X (%s)\n", type, mqtt_pkt_str(type));
     switch (type) {
         case MQTT_PKT_CONNECT:
             return encode_connect(pkt, buf);
