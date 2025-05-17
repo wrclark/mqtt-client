@@ -4,15 +4,13 @@
 
 #include "decode.h"
 
-static void decode_connect(const uint8_t *buf, size_t bufsiz, mqtt_packet_t *pkt, size_t pktsiz) {
+static void decode_connect(const uint8_t *buf, size_t bufsiz, mqtt_packet_t *pkt) {
     uint8_t used=0;
     uint16_t offset=0;
     uint8_t strings[1024];
     const uint8_t *p = buf;
 
     (void) bufsiz;
-    (void) pktsiz;
-
 
     printf("flags: %x\n", *p++ & 0x0f);
     printf("remaining length: %u\n", mqtt_varint_decode(p, &used));
@@ -34,7 +32,7 @@ static void decode_connect(const uint8_t *buf, size_t bufsiz, mqtt_packet_t *pkt
     pkt->real_size = (size_t)(p - buf);
 }
 
-static void decode_publish(const uint8_t *buf, size_t bufsiz, mqtt_packet_t *pkt, size_t pktsiz) {
+static void decode_publish(const uint8_t *buf, size_t bufsiz, mqtt_packet_t *pkt) {
     uint8_t used = 0;
     size_t plen;
     uint8_t flags;
@@ -42,8 +40,6 @@ static void decode_publish(const uint8_t *buf, size_t bufsiz, mqtt_packet_t *pkt
     const uint8_t *p = buf;
     uint16_t packet_id = 0;
     char *payload = NULL;
-
-    (void) bufsiz;
 
     memset(pkt, 0, sizeof(mqtt_packet_t));
     pkt->real_size = 0; 
@@ -100,13 +96,12 @@ static void decode_publish(const uint8_t *buf, size_t bufsiz, mqtt_packet_t *pkt
         plen -= 2;
     }
 
-    if ((size_t)(p + plen - buf) > pktsiz) {
+    if ((size_t)(p + plen - buf) > bufsiz) {
         printf("truncating payload: plen=%lu -> ", plen);
-        plen = pktsiz - (size_t)(p - buf);
+        plen = bufsiz - (size_t)(p - buf);
         printf("%lu\n", plen);
     }
 
-    printf("payload: ");
     payload = malloc(plen);
     memcpy(payload, p, plen);
     pkt->payload = payload;
@@ -116,7 +111,7 @@ static void decode_publish(const uint8_t *buf, size_t bufsiz, mqtt_packet_t *pkt
 }
 
 
-static void decode_suback(const uint8_t *buf, size_t bufsiz, mqtt_packet_t *pkt, size_t pktsiz) {
+static void decode_suback(const uint8_t *buf, size_t bufsiz, mqtt_packet_t *pkt) {
     const uint8_t *p = buf;
     uint8_t flags = *p++ & 0x0f;
     uint8_t used=0;
@@ -125,8 +120,6 @@ static void decode_suback(const uint8_t *buf, size_t bufsiz, mqtt_packet_t *pkt,
     uint32_t i;
 
     (void) bufsiz;
-    (void) pktsiz;
-
 
     printf("flags: 0x%02x\n", flags);
     rem = mqtt_varint_decode(p, &used);
@@ -160,24 +153,24 @@ static void decode_pubresp(const uint8_t *buf, size_t bufsiz) {
     update_qos_state(pktid, flags & 0xf0);
 }
 
-int decode(mqtt_packet_t *pkt, size_t pktsiz, const uint8_t *buf, size_t bufsiz) {
+int decode(mqtt_packet_t *pkt, const uint8_t *buf, size_t bufsiz) {
     uint8_t type = *buf & 0xf0;
     printf("[dec] type=0x%02X\n", *buf);
     switch (type & 0xf0) {
         case MQTT_PKT_CONNECT:
             printf("CONNECT\n");
-            decode_connect(buf, bufsiz, pkt, pktsiz);
+            decode_connect(buf, bufsiz, pkt);
             break;
         case MQTT_PKT_CONNACK:
             printf("CONNACK\n");
             break;
         case MQTT_PKT_PUBLISH:
             printf("PUBLISH\n");
-            decode_publish(buf, bufsiz, pkt, pktsiz);
+            decode_publish(buf, bufsiz, pkt);
             break;
         case MQTT_PKT_SUBACK:
             printf("SUBACK\n");
-            decode_suback(buf, bufsiz, pkt, pktsiz);
+            decode_suback(buf, bufsiz, pkt);
             break;
         case MQTT_PKT_PINGRESP:
             printf("PINGRESP\n");

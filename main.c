@@ -119,9 +119,8 @@ int main(void) {
             /* clear pkt */
             memset(&pkt, 0,  sizeof(mqtt_packet_t));
             
-            packet_decode(&pkt, xfer->size, xfer->pkt, xfer->size);
+            packet_decode(&pkt, xfer->pkt, xfer->size);
             if ((pkt.fix.type & 0xf0) == MQTT_PKT_PUBLISH) {
-                printf("%2.2X\n", (pkt.fix.type & 0xf0));
                 if (pkt.payload) {
                     printf("topic: %s\n", pkt.var.publish.topic);
                     printf("payload (size=%lu): %.*s\n", pkt.payload_size, (int)pkt.payload_size, (const char *)pkt.payload);

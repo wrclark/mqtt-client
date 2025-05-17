@@ -72,6 +72,6 @@ size_t packet_encode(mqtt_packet_t *pkt, uint8_t *buf, size_t size) {
     return encode(pkt, buf, size);
 }
 
-void packet_decode(mqtt_packet_t *pkt, size_t pktsiz, uint8_t *buf, size_t bufsiz) {
-    decode(pkt, pktsiz, buf, bufsiz);
+void packet_decode(mqtt_packet_t *pkt, uint8_t *buf, size_t bufsiz) {
+    decode(pkt, buf, bufsiz);
 }

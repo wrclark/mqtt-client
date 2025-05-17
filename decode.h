@@ -6,6 +6,6 @@
 #include "mqtt.h"
 #include "packet.h"
 
-int decode(mqtt_packet_t *pkt, size_t pktsiz, const uint8_t *buf, size_t bufsiz);
+int decode(mqtt_packet_t *pkt, const uint8_t *buf, size_t bufsiz);
 
 #endif
