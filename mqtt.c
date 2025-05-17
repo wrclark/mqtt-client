@@ -61,7 +61,7 @@ void update_qos_state(uint16_t id, uint8_t type) {
         memcpy(buf+2, &id, 2);
         memcpy(xfer->pkt, buf, 4);
         queue_push(&tx_queue, xfer);
-        printf("[Tx] pushed message (%d/%d)\n", tx_queue.count, QUEUE_SIZE);
+        printf("[TX] pushed message (%d/%d)\n", tx_queue.count, QUEUE_SIZE);
     }
     if (qos_states[id] == PKT_STATE_PUBCOMP) {
         qos_states[id] = PKT_STATE_UNUSED;
