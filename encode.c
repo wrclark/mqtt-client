@@ -55,7 +55,7 @@ static size_t encode_publish(mqtt_packet_t *pkt, uint8_t *buf, size_t size) {
     for (i = 0; i < 4 && pkt->fix.remainder[i]; ++i)
         *p++ = pkt->fix.remainder[i];
     
-    total = mqtt_string_encode(p, pkt->var.publish.topic, 2048);
+    total = mqtt_string_encode(p, pkt->var.publish.topic, MAX_PACKET_SIZE);
     p += total;
     
     /* if QoS > 0 */

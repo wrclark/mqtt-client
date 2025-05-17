@@ -14,21 +14,21 @@ void util_connect_payload(mqtt_connect_opt_t *con, const char *client,
     size_t total = 0;
     uint8_t *p = con->payload;
 
-    total += mqtt_string_encode(con->payload, client, con->size - total);
+    total += mqtt_string_encode(con->payload, (const uint8_t *)client, con->size - total);
 
     if (con->flags & MQTT_CONNECT_FLAG_WILL) {
         if (wt)
-            total += mqtt_string_encode(p + total, wt, con->size - total);
+            total += mqtt_string_encode(p + total, (const uint8_t *)wt, con->size - total);
         if (wm)
-            total += mqtt_string_encode(p + total, wm, con->size - total);
+            total += mqtt_string_encode(p + total, (const uint8_t *)wm, con->size - total);
     }
 
     if (con->flags & MQTT_CONNECT_FLAG_USERNAME && user) {
-        total += mqtt_string_encode(p + total, user, con->size - total);
+        total += mqtt_string_encode(p + total, (const uint8_t *)user, con->size - total);
     }
 
     if (con->flags & MQTT_CONNECT_FLAG_PASSWORD && pw) {
-        total += mqtt_string_encode(p + total, pw, con->size - total);
+        total += mqtt_string_encode(p + total, (const uint8_t *)pw, con->size - total);
     }
 
     /* TODO check total */

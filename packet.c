@@ -16,7 +16,7 @@ void packet_connect(mqtt_packet_t *pkt, mqtt_connect_opt_t *opt) {
 
     pkt->fix.type = 0x10;
 
-    mqtt_string_encode(pkt->var.connect.prot, "MQTT", 6);
+    mqtt_string_encode(pkt->var.connect.prot, (const uint8_t *)"MQTT", 6);
     pkt->var.connect.level = 4;
     pkt->var.connect.flags = opt->flags;
     pkt->var.connect.keepalive = opt->keepalive;
@@ -41,20 +41,21 @@ void packet_subscribe(mqtt_packet_t *pkt, mqtt_subscribe_opt_t *opt) {
     pkt->real_size = (size_t)(1 + varint_len + total);
 }
 
-void packet_publish(mqtt_packet_t *pkt, const char *topic, const uint8_t opts, const void *payload, const size_t payload_size) {
+void packet_publish(mqtt_packet_t *pkt, const char *topic, const uint8_t opts, void *payload, const size_t payload_size) {
     size_t total = 0;
     uint8_t varint_len;
 
     pkt->fix.type = MQTT_PKT_PUBLISH | opts;
     pkt->payload = payload;
     pkt->payload_size = payload_size;
-    pkt->var.publish.topic = topic;
+    strcpy((char *)&pkt->var.publish.topic, topic);
     pkt->var.publish.topic_length = (uint16_t)strlen(topic);
 
     total = pkt->var.publish.topic_length + 2; 
 
     /* packet identifier (only if QoS > 0) */
     if (pkt->fix.type & MQTT_PUBLISH_FLAG_QOS) {
+        /* TODO: "reserve" next available pkt id */
         pkt->var.publish.packet_id = htons(1);
         total += 2;
     }

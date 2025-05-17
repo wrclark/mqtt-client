@@ -17,7 +17,7 @@
 #define SUB_SIZE 512
 #define NICK_SIZE 128
 
-const char *msg = "hello mqtt!!!";
+char msg[] = "hello mqtt!!!";
 
 uint8_t pktbuf[MAX_PACKET_SIZE]; /* for generating pkts */
 uint8_t subs[SUB_SIZE];    /* sub topics + qos */
@@ -32,6 +32,8 @@ void sighandler(int sig);
 
 static volatile int should_run = 1;
 static uint16_t keepalive = 60;
+
+
 
 int main(void) {
     mqtt_conf_t conf = {0};
@@ -53,7 +55,7 @@ int main(void) {
     signal(SIGABRT, sighandler);
 
     /* general config */
-    conf.broker = "test.mosquitto.org"; /* mosquitto boots for no reason */
+    conf.broker = "broker.hivemq.com"; /* mosquitto boots for no reason */
     conf.port = 1883;
     conf.buf = pktbuf;
     conf.size = MAX_PACKET_SIZE;
@@ -93,8 +95,8 @@ int main(void) {
 
     /* PUBLISH config */
     pubopt.flags = MQTT_PUBLISH_FLAG_QOS_2;
-    pubopt.topic = "test/topic";
-    pubopt.data = msg;
+    strcpy((char *)&pubopt.topic, "test/topic");
+    pubopt.data = strdup(msg);
     pubopt.size = strlen(msg);
 
     if (mqtt_publish(&conf, &pubopt, &pkt, &tx_queue) != 0) {
@@ -110,6 +112,13 @@ int main(void) {
             printf("[rx] pop'd message (%d/%d)\n", rx_queue.count, QUEUE_SIZE);
             xfer = (pkt_xfer *)queue_pop(&rx_queue);
             packet_decode(&pkt, xfer->size, xfer->pkt, xfer->size);
+            if ((pkt.fix.type & 0xf0) == MQTT_PKT_PUBLISH) {
+                printf("%2.2X\n", (pkt.fix.type & 0xf0));
+                if (pkt.payload) {
+                    printf("payload (size=%lu): %s\n", pkt.payload_size, (const char *)pkt.payload);
+                    free(pkt.payload);
+                }
+            }
             free(xfer->pkt);
             free(xfer);
         }

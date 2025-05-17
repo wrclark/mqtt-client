@@ -36,24 +36,28 @@ static void decode_connect(const uint8_t *buf, size_t bufsiz, mqtt_packet_t *pkt
 
 static void decode_publish(const uint8_t *buf, size_t bufsiz, mqtt_packet_t *pkt, size_t pktsiz) {
     uint8_t used = 0;
-    char strings[1024]; /* topic buffer, fixed size */
     size_t plen;
-    uint32_t i;
     uint8_t flags;
     uint16_t topic_len;
     const uint8_t *p = buf;
+    uint16_t packet_id = 0;
+    char *payload = NULL;
 
     (void) bufsiz;
-    memset(strings, 0, 1024);
 
+    memset(pkt, 0, sizeof(mqtt_packet_t));
     pkt->real_size = 0; 
 
     flags = *p;
     printf("flags=%d ", flags & 0x0F);
     p++;
 
+    pkt->fix.type = MQTT_PKT_PUBLISH | (flags & 0x0f);
+
     plen = mqtt_varint_decode(p, &used);
     p += used;
+
+    pkt->payload_size = plen;
 
     printf("remain=%lu ", plen);
 
@@ -66,18 +70,20 @@ static void decode_publish(const uint8_t *buf, size_t bufsiz, mqtt_packet_t *pkt
     p += 2;
     plen -= 2;
 
-    if (topic_len >= sizeof(strings)) {
-        topic_len = sizeof(strings) - 1;
-    }
-
     if (plen < topic_len) {
         printf("topic length exceeds remaining length\n");
         return;
     }
 
-    memcpy(strings, p, topic_len);
-    strings[topic_len] = '\0';
-    printf("topic: %s\n", strings);
+    if (topic_len > MAX_TOPIC_LENGTH) {
+        printf("topic too long!");
+        topic_len = MAX_TOPIC_LENGTH;
+    }
+
+    memcpy(&pkt->var.publish.topic, p, topic_len);
+    pkt->var.publish.topic[topic_len] = '\0';
+    pkt->var.publish.topic_length = topic_len;
+
     p += topic_len;
     plen -= topic_len;
 
@@ -86,6 +92,10 @@ static void decode_publish(const uint8_t *buf, size_t bufsiz, mqtt_packet_t *pkt
             printf("missing packet identifier\n");
             return;
         }
+
+        packet_id |= (uint8_t)((*(p+1) >> 8));
+        packet_id |= (uint8_t)((*(p) & 0xf0));
+        pkt->var.publish.packet_id = packet_id;
         p += 2;
         plen -= 2;
     }
@@ -97,10 +107,10 @@ static void decode_publish(const uint8_t *buf, size_t bufsiz, mqtt_packet_t *pkt
     }
 
     printf("payload: ");
-    for (i = 0; i < plen; i++) {
-        putchar(p[i]);
-    }
-    putchar('\n');
+    payload = malloc(plen);
+    memcpy(payload, p, plen);
+    pkt->payload = payload;
+    pkt->payload_size = plen;
 
     pkt->real_size = (size_t)((p + plen) - buf);
 }

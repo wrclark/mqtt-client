@@ -4,6 +4,8 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+#include "config.h"
+
 
 #define MQTT_CONNECT_FLAG_USERNAME 0x80
 #define MQTT_CONNECT_FLAG_PASSWORD 0x40
@@ -55,8 +57,8 @@ typedef struct {
 
 typedef struct {
     uint16_t topic_length;
-    const void *topic;
     uint16_t packet_id;
+    uint8_t topic[MAX_TOPIC_LENGTH + 1];
 } var_header_publish_t;
 
 typedef struct {
@@ -116,7 +118,7 @@ typedef union {
 typedef struct {
     fix_header_t fix;
     var_header_t var;
-    const void *payload;
+    void *payload;
     size_t payload_size;
     size_t real_size;
 } mqtt_packet_t;
@@ -138,10 +140,10 @@ typedef struct {
 } mqtt_subscribe_opt_t;
 
 typedef struct {
-    const char *topic;
-    const void *data;
+    void *data;
     size_t size;
     uint8_t flags;
+    uint8_t topic[MAX_TOPIC_LENGTH + 1];
 } mqtt_publish_opt_t;
 
 /************************************************/
@@ -149,7 +151,7 @@ typedef struct {
 size_t packet_encode(mqtt_packet_t *pkt, uint8_t *buf, size_t size);
 void packet_connect(mqtt_packet_t *pkt, mqtt_connect_opt_t *opt);
 void packet_subscribe(mqtt_packet_t *pkt, mqtt_subscribe_opt_t *opt);
-void packet_publish(mqtt_packet_t *pkt, const char *topic, const uint8_t opts, const void *payload, const size_t payload_size);
+void packet_publish(mqtt_packet_t *pkt, const char *topic, const uint8_t opts, void *payload, const size_t payload_size);
 void packet_decode(mqtt_packet_t *pkt, size_t pktsiz, uint8_t *buf, size_t bufsiz);
 
 

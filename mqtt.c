@@ -102,8 +102,8 @@ int mqtt_varint_encode(uint8_t *dst, uint32_t n) {
 }
 
 
-uint16_t mqtt_string_encode(uint8_t *buf, const char *msg, size_t max) {
-    uint16_t size = (uint16_t)strlen(msg);
+uint16_t mqtt_string_encode(uint8_t *buf, const uint8_t *msg, size_t max) {
+    uint16_t size = (uint16_t)strlen((const char *)msg);
     uint16_t sizeb16 = htons(size);
 
     if ((size_t)(size + 2) > max) {
@@ -160,7 +160,7 @@ int mqtt_ping(mqtt_conf_t *conf, queue_t *q) {
 int mqtt_publish(mqtt_conf_t *conf, mqtt_publish_opt_t *opt, mqtt_packet_t *pkt, queue_t *q) {
     pkt_xfer *xfer;
 
-    packet_publish(pkt, opt->topic, opt->flags, opt->data, opt->size);
+    packet_publish(pkt, (const char*)opt->topic, opt->flags, opt->data, opt->size);
     packet_encode(pkt, conf->buf, conf->size);
 
     xfer = malloc(sizeof(pkt_xfer));
