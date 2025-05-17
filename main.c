@@ -113,7 +113,7 @@ int main(void) {
 
     while (should_run) {
         if (!queue_empty(&rx_queue)) {
-            printf("[rx] pop'd message (%d/%d)\n", rx_queue.count, QUEUE_SIZE);
+            printf("[Rx] pop'd message (%d/%d)\n", rx_queue.count, QUEUE_SIZE);
             xfer = (pkt_xfer *)queue_pop(&rx_queue);
 
             /* clear pkt */
@@ -188,7 +188,7 @@ void *net_recv_loop(void *arg) {
         } else if (ret == 0) {
             /* no full packet, check TX queue */
             if (!queue_empty(&tx_queue)) {
-                printf("[tx] pop'd message (%d/%d)\n", rx_queue.count, QUEUE_SIZE);
+                printf("[Tx] pop'd message (%d/%d)\n", rx_queue.count, QUEUE_SIZE);
                 xfer = (pkt_xfer *)queue_pop(&tx_queue);
                 mqtt_net_send(conf.fd, xfer->pkt, xfer->size);
                 free(xfer->pkt);
@@ -206,7 +206,7 @@ void *net_recv_loop(void *arg) {
             xfer->size = (size_t) ret;
             memcpy(xfer->pkt, rxstate.buf, (size_t) ret);
             queue_push(&rx_queue, (void *)xfer);
-            printf("[rx] pushed message (%d/%d)\n", rx_queue.count, QUEUE_SIZE);
+            printf("[Rx] pushed message (%d/%d)\n", rx_queue.count, QUEUE_SIZE);
         } else {
             puts("QUEUE FULL !!!");
         }

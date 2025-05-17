@@ -56,7 +56,7 @@ void packet_publish(mqtt_packet_t *pkt, const char *topic, const uint8_t opts, v
     /* packet identifier (only if QoS > 0) */
     if (pkt->fix.type & MQTT_PUBLISH_FLAG_QOS) {
         /* TODO: "reserve" next available pkt id */
-        pkt->var.publish.packet_id = htons(1);
+        pkt->var.publish.packet_id = 1337; /* htons() done by encoder */
         total += 2;
     }
 

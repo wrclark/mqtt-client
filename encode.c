@@ -48,6 +48,7 @@ static size_t encode_publish(mqtt_packet_t *pkt, uint8_t *buf, size_t size) {
     uint8_t *p = buf;
     int i;
     uint16_t total;
+    uint16_t pkt_id;
 
     (void) size;  /* TODO */
 
@@ -60,7 +61,8 @@ static size_t encode_publish(mqtt_packet_t *pkt, uint8_t *buf, size_t size) {
     
     /* if QoS > 0 */
     if (pkt->fix.type & MQTT_PUBLISH_FLAG_QOS) {
-        memcpy(p, &pkt->var.publish.packet_id, 2);
+        pkt_id = htons(pkt->var.publish.packet_id);
+        memcpy(p, &pkt_id, 2);
         p += 2;
     }
 

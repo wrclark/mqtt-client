@@ -1,4 +1,5 @@
 
+#include <arpa/inet.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -90,8 +91,7 @@ static void decode_publish(const uint8_t *buf, size_t bufsiz, mqtt_packet_t *pkt
             return;
         }
 
-        packet_id |= (uint8_t)((*(p+1) >> 8));
-        packet_id |= (uint8_t)((*(p) & 0xf0));
+        packet_id = ntohs(p[0] | p[1]);
         pkt->var.publish.packet_id = packet_id;
         p += 2;
         plen -= 2;
@@ -143,14 +143,11 @@ static void decode_pubresp(const uint8_t *buf, size_t bufsiz) {
     uint8_t flags = *p++;
     uint8_t used=0;
     uint16_t pktid;
-    uint32_t rem;
     (void) bufsiz;
 
-    printf("flags=%d\n", flags);
-    rem = mqtt_varint_decode(buf, &used);
+    mqtt_varint_decode(p, &used);
     p += used;
-    printf("rem=%d\n", rem);
-    pktid = (*p << 8) | *(p + 1);
+    pktid = ((uint16_t)p[0] << 8) | p[1];
     update_qos_state(pktid, flags & 0xf0);
 }
 

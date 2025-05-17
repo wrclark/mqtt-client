@@ -46,6 +46,7 @@ void update_qos_state(uint16_t id, uint8_t type) {
         case MQTT_PKT_PUBREL:  new_state = PKT_STATE_PUBREL;  break;
         case MQTT_PKT_PUBCOMP: new_state = PKT_STATE_PUBCOMP; break;
     }
+    printf("qos pkt id=%d\n", id);
     printf("update_qos>>old=%d\n", qos_states[id]);
     qos_states[id] = new_state;
     printf("update_qos>>new=%d\n", qos_states[id]);
@@ -56,15 +57,15 @@ void update_qos_state(uint16_t id, uint8_t type) {
         xfer->size = 4;
         buf[0] = 0x62; /* header + flags, todo fix */
         buf[1] = 0x02; /* rem size */
-        buf[2] = (uint8_t)((htons(id) >> 8) & 0xff);
-        buf[3] = (uint8_t)((htons(id)) & 0xff);
+        id = htons(id);
+        memcpy(buf+2, &id, 2);
         memcpy(xfer->pkt, buf, 4);
         queue_push(&tx_queue, xfer);
-        printf("[tx] pushed message (%d/%d)\n", tx_queue.count, QUEUE_SIZE);
+        printf("[Tx] pushed message (%d/%d)\n", tx_queue.count, QUEUE_SIZE);
     }
     if (qos_states[id] == PKT_STATE_PUBCOMP) {
         qos_states[id] = PKT_STATE_UNUSED;
-        printf("pubcomp for id=%d received\n", htons(id));
+        printf("pubcomp for id=%d received\n", id);
     }
 }
 
