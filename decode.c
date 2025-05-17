@@ -8,25 +8,25 @@
 static void decode_connect(const uint8_t *buf, size_t bufsiz, mqtt_packet_t *pkt) {
     uint8_t used=0;
     uint16_t offset=0;
-    uint8_t strings[1024];
+    uint8_t strings[512];
     const uint8_t *p = buf;
 
     (void) bufsiz;
 
     printf("flags: %x\n", *p++ & 0x0f);
-    printf("remaining length: %u\n", mqtt_varint_decode(p, &used));
+    printf("rem: %u\n", mqtt_varint_decode(p, &used));
     p += used;
     printf("used: %d\n", used);
-    offset=mqtt_string_decode(p, strings, 1024);
+    offset=mqtt_string_decode(p, strings, 512);
     strings[offset]=0;
     printf("protocol: %s\n", strings);
     printf("offset: %u\n", offset);
     p += (offset + 2);
-    printf("protocol level: %d\n", *p++);
-    printf("connect flags: %d\n", *p++);
+    printf("level: %d\n", *p++);
+    printf("flags: %d\n", *p++);
     printf("keep alive: %d\n", *(p+1) | (*p << 8));
     p += 2;
-    offset=mqtt_string_decode(p, strings, 1024);
+    offset=mqtt_string_decode(p, strings, 512);
     strings[offset]=0;
     printf("payload: %s\n", strings);
 

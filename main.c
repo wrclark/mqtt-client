@@ -33,14 +33,14 @@ void sighandler(int sig);
 static volatile int should_run = 1;
 static uint16_t keepalive = 60;
 
-
+static mqtt_conf_t conf;
+static mqtt_packet_t pkt;
+static mqtt_connect_opt_t conopt;
+static mqtt_subscribe_opt_t subopt;
+static mqtt_publish_opt_t pubopt;
 
 int main(void) {
-    mqtt_conf_t conf = {0};
-    mqtt_packet_t pkt = {0};
-    mqtt_connect_opt_t conopt = {0};
-    mqtt_subscribe_opt_t subopt = {0};
-    mqtt_publish_opt_t pubopt = {0};
+
     pkt_xfer *xfer;
     pthread_t net_thread; /* does all network IO */
     pthread_t ping_thread; /* sends hello occasionally */
@@ -143,11 +143,12 @@ int main(void) {
 
 /* sends a ping to broker every so often */
 void *pinger(void *arg) {
-    mqtt_conf_t *conf = arg;
+
+    (void) arg;
 
     while(should_run) {
         sleep(keepalive);
-        mqtt_ping(conf, &tx_queue);
+        mqtt_ping(&conf, &tx_queue);
         puts("PING");
     }
 
@@ -158,9 +159,11 @@ void *pinger(void *arg) {
 /* if any pkts are in the tx queue, it will transmit them */
 void *net_recv_loop(void *arg) {
     mqtt_recv_state_t rxstate;
-    mqtt_conf_t *conf = arg;
     pkt_xfer *xfer;
     ssize_t ret;
+
+    (void) arg;
+
     memset(&rxstate, 0, sizeof(rxstate));
 
     rxstate.buf = malloc(MAX_PACKET_SIZE);
@@ -170,13 +173,13 @@ void *net_recv_loop(void *arg) {
         return NULL;
     }
 
-    if (mqtt_init(conf) != 0) {
+    if (mqtt_init(&conf) != 0) {
         fprintf(stderr, "mqtt_init()\n");
         return NULL;
     }
 
     while (should_run) {
-        ret = mqtt_net_recv_pkt_stateful(conf->fd, &rxstate);
+        ret = mqtt_net_recv_pkt_stateful(conf.fd, &rxstate);
         if (ret < 0) {
             puts("error: mqtt_net_recv_pkt_stateful() < 0");
             should_run = 0;
@@ -187,7 +190,7 @@ void *net_recv_loop(void *arg) {
             if (!queue_empty(&tx_queue)) {
                 printf("[tx] pop'd message (%d/%d)\n", rx_queue.count, QUEUE_SIZE);
                 xfer = (pkt_xfer *)queue_pop(&tx_queue);
-                mqtt_net_send(conf->fd, xfer->pkt, xfer->size);
+                mqtt_net_send(conf.fd, xfer->pkt, xfer->size);
                 free(xfer->pkt);
                 free(xfer);
                 continue;
@@ -214,7 +217,7 @@ void *net_recv_loop(void *arg) {
     /* send DISCONNECT packet */
     rxstate.buf[0] = MQTT_PKT_DISCONNECT;
     rxstate.buf[1] = 0;
-    mqtt_net_send(conf->fd, rxstate.buf, 2);
+    mqtt_net_send(conf.fd, rxstate.buf, 2);
 
 
     free(rxstate.buf);

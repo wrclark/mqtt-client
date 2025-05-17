@@ -119,7 +119,7 @@ uint16_t mqtt_string_encode(uint8_t *buf, const uint8_t *msg, size_t max) {
 uint16_t mqtt_string_decode(const uint8_t *buf, uint8_t *dest, size_t max) {
     uint16_t size = (buf[0] << 8) | buf[1];
 
-    if ((size_t)(size + 2) > max) {
+    if (size > max - 2) {
         return 0;
     }
 

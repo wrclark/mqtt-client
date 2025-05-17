@@ -1,16 +1,20 @@
 CC      := gcc
 CFLAGS  := -std=c89 -O3 -Wall -Wextra -Werror -pedantic \
-          -Wconversion -Wsign-conversion -Wcast-align \
-          -Wshadow -Wcast-qual -Wstrict-prototypes \
-          -Wmissing-prototypes -Wmissing-declarations \
-          -fstrict-aliasing -fomit-frame-pointer -fno-common \
-          -fstack-protector-strong -D_FORTIFY_SOURCE=2 \
-          -Wundef -Wwrite-strings -Wpointer-arith \
-          -Wbad-function-cast -Wjump-misses-init -Winit-self \
-          -Wlogical-op -fPIC -march=native -flto \
-          -Wformat=2 -Wformat-security -Wnull-dereference
+           -Wconversion -Wsign-conversion -Wcast-align \
+           -Wshadow -Wcast-qual -Wstrict-prototypes \
+           -Wmissing-prototypes -Wmissing-declarations \
+           -fstrict-aliasing -fomit-frame-pointer -fno-common \
+           -fstack-protector-strong -D_FORTIFY_SOURCE=2 \
+           -Wundef -Wwrite-strings -Wpointer-arith \
+           -Wbad-function-cast -Wjump-misses-init -Winit-self \
+           -Wlogical-op -fPIC -march=native -flto \
+           -Wformat=2 -Wformat-security -Wnull-dereference \
+           -Winline -Wstrict-overflow=5 -Wframe-larger-than=1024 \
+           -Wfloat-equal -Wmissing-noreturn -Wmissing-format-attribute
+
 LDFLAGS := -flto -Wl,-O1 -Wl,--as-needed \
-           -Wl,-z,relro -Wl,-z,now -Wl,-z,noexecstack
+           -Wl,-z,relro -Wl,-z,now -Wl,-z,noexecstack \
+           -Wl,--gc-sections
 
 CFILES  := $(wildcard *.c)
 OBJECTS := $(CFILES:.c=.o)
